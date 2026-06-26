@@ -46,10 +46,30 @@
     return base + '_' + label + '.' + ext;
   }
 
+  function pickFromSrcset(srcset) {
+    if (!srcset || typeof srcset !== 'string') return '';
+    var candidates = srcset.split(',').map(function (s) { return s.trim(); })
+      .filter(Boolean)
+      .map(function (part) {
+        var bits = part.split(/\s+/);
+        var url = bits[0];
+        var desc = bits[1];
+        var weight = 1;
+        if (desc) {
+          var m = desc.match(/^([\d.]+)([wx])$/);
+          if (m) weight = parseFloat(m[1]);
+        }
+        return { url: url, weight: weight };
+      });
+    if (!candidates.length) return '';
+    return candidates.reduce(function (a, b) { return b.weight > a.weight ? b : a; }).url;
+  }
+
   return {
     detectPageType: detectPageType,
     sanitizeFilename: sanitizeFilename,
     extFromUrl: extFromUrl,
-    buildFilename: buildFilename
+    buildFilename: buildFilename,
+    pickFromSrcset: pickFromSrcset
   };
 }));

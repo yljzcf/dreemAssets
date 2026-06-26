@@ -85,3 +85,24 @@ test('buildFilename: strips dot from ext', () => {
     'a_b.jpg'
   );
 });
+
+test('pickFromSrcset: picks highest w descriptor', () => {
+  assert.strictEqual(core.pickFromSrcset('a.jpg 320w, b.jpg 640w'), 'b.jpg');
+});
+
+test('pickFromSrcset: picks highest x descriptor', () => {
+  assert.strictEqual(core.pickFromSrcset('a.jpg 1x, b.jpg 2x'), 'b.jpg');
+});
+
+test('pickFromSrcset: single url no descriptor', () => {
+  assert.strictEqual(core.pickFromSrcset('a.jpg'), 'a.jpg');
+});
+
+test('pickFromSrcset: empty returns empty string', () => {
+  assert.strictEqual(core.pickFromSrcset(''), '');
+  assert.strictEqual(core.pickFromSrcset(null), '');
+});
+
+test('pickFromSrcset: tolerates extra whitespace', () => {
+  assert.strictEqual(core.pickFromSrcset('  a.jpg   100w ,  b.jpg   200w '), 'b.jpg');
+});
