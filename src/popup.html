@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="hdr">
+    <span class="title">Dreem 图片下载</span>
+    <span id="pageType" class="badge">检测中…</span>
+  </header>
+
+  <div id="topActions" class="top-actions" hidden>
+    <button id="btnZip" class="btn primary">打包下载 ZIP</button>
+    <button id="btnAll" class="btn">全部单独下载</button>
+  </div>
+
+  <div id="status" class="status">正在扫描页面…</div>
+  <ul id="list" class="list"></ul>
+
+  <script src="popup.js"></script>
+</body>
+</html>
