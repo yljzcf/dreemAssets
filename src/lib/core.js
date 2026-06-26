@@ -8,7 +8,7 @@
   'use strict';
 
   function detectPageType(url) {
-    let pathname;
+    var pathname;
     try {
       pathname = new URL(url).pathname;
     } catch (e) {
@@ -41,12 +41,14 @@
   function buildFilename(ctx) {
     ctx = ctx || {};
     var base = sanitizeFilename(ctx.pageName || 'dreem');
-    var label = sanitizeFilename(ctx.label || ('img' + (((ctx.index || 0)) + 1)));
-    var ext = sanitizeFilename(String(ctx.ext || 'png')).replace(/^\.+/, '') || 'png';
+    var label = sanitizeFilename(ctx.label || ('img' + ((ctx.index || 0) + 1)));
+    // ext is a short token, not a filename: strip anything non-alphanumeric directly
+    var ext = String(ctx.ext || 'png').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'png';
     return base + '_' + label + '.' + ext;
   }
 
   function pickFromSrcset(srcset) {
+    // Note: splits on ',' — does not handle commas inside data: URIs (rare in srcset).
     if (!srcset || typeof srcset !== 'string') return '';
     var candidates = srcset.split(',').map(function (s) { return s.trim(); })
       .filter(Boolean)
@@ -89,12 +91,15 @@
         }
         if (!url || seen[url]) return;
         seen[url] = true;
-        var label = rule.multiple ? ((rule.label || rule.key) + '_' + (i + 1)) : (rule.label || rule.key);
+        // fileLabel adds an index suffix for multi-image rules; the descriptor's display
+        // `label` stays clean. width/height are display-only — an unloaded image reports
+        // naturalWidth 0, which we coalesce to null so the UI shows no dimensions.
+        var fileLabel = rule.multiple ? ((rule.label || rule.key) + '_' + (i + 1)) : (rule.label || rule.key);
         out.push({
           key: rule.key,
           label: rule.label || rule.key,
           url: url,
-          filename: buildFilename({ pageName: pageName, label: label, index: i, ext: extFromUrl(url) }),
+          filename: buildFilename({ pageName: pageName, label: fileLabel, index: i, ext: extFromUrl(url) }),
           width: el.naturalWidth || null,
           height: el.naturalHeight || null
         });

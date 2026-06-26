@@ -172,3 +172,18 @@ test('extractImages: multiple:true yields indexed labels', () => {
   assert.strictEqual(out[0].filename, 'x_画廊_1.png');
   assert.strictEqual(out[1].filename, 'x_画廊_2.png');
 });
+
+test('extractImages: unloaded image (naturalWidth 0) yields null dimensions', () => {
+  var doc = fakeDoc({ 'img.a': fakeEl({ src: 'https://cdn.x/a.png', naturalWidth: 0, naturalHeight: 0 }) });
+  var rules = [{ key: 'a', label: 'A', selector: 'img.a', getUrl: function (el) { return el.src; } }];
+  var out = core.extractImages(doc, rules, { pageName: 'x' });
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0].width, null);
+  assert.strictEqual(out[0].height, null);
+});
+
+test('extractImages: getUrl returning empty string skips the element', () => {
+  var doc = fakeDoc({ 'img.a': fakeEl({ src: '' }) });
+  var rules = [{ key: 'a', label: 'A', selector: 'img.a', getUrl: function (el) { return el.src; } }];
+  assert.deepStrictEqual(core.extractImages(doc, rules, { pageName: 'x' }), []);
+});
