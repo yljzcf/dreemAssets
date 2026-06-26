@@ -65,11 +65,50 @@
     return candidates.reduce(function (a, b) { return b.weight > a.weight ? b : a; }).url;
   }
 
+  function extractImages(doc, rules, ctx) {
+    var out = [];
+    var seen = {};
+    var pageName = (ctx && ctx.pageName) || 'dreem';
+    (rules || []).forEach(function (rule) {
+      var els = [];
+      try {
+        if (rule.multiple) {
+          var nodeList = doc.querySelectorAll(rule.selector);
+          els = nodeList ? Array.prototype.slice.call(nodeList) : [];
+        } else {
+          var el = doc.querySelector(rule.selector);
+          if (el) els = [el];
+        }
+      } catch (e) { els = []; }
+
+      els.forEach(function (el, i) {
+        var url = '';
+        try { url = rule.getUrl ? rule.getUrl(el) : (el.src || ''); } catch (e) { url = ''; }
+        if (rule.upgrade && url) {
+          try { url = rule.upgrade(url) || url; } catch (e) { /* keep url */ }
+        }
+        if (!url || seen[url]) return;
+        seen[url] = true;
+        var label = rule.multiple ? ((rule.label || rule.key) + '_' + (i + 1)) : (rule.label || rule.key);
+        out.push({
+          key: rule.key,
+          label: rule.label || rule.key,
+          url: url,
+          filename: buildFilename({ pageName: pageName, label: label, index: i, ext: extFromUrl(url) }),
+          width: el.naturalWidth || null,
+          height: el.naturalHeight || null
+        });
+      });
+    });
+    return out;
+  }
+
   return {
     detectPageType: detectPageType,
     sanitizeFilename: sanitizeFilename,
     extFromUrl: extFromUrl,
     buildFilename: buildFilename,
-    pickFromSrcset: pickFromSrcset
+    pickFromSrcset: pickFromSrcset,
+    extractImages: extractImages
   };
 }));
