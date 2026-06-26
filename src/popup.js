@@ -10,6 +10,7 @@
 
   var currentImages = [];
   var currentPageName = 'dreem';
+  var currentTabId = null;
 
   var TYPE_LABEL = { character: '角色页', location: '场景页', unknown: '非目标页' };
 
@@ -19,21 +20,26 @@
     statusEl.hidden = !text;
   }
 
-  function sendToBackground(message) {
+  // All work (scan + download + zip) runs in the content script, because the
+  // target images are blob: URLs that only resolve inside the page.
+  function sendToContent(message) {
     return new Promise(function (resolve) {
-      chrome.runtime.sendMessage(message, function (resp) { resolve(resp); });
+      if (currentTabId == null) { resolve(null); return; }
+      chrome.tabs.sendMessage(currentTabId, message, function (resp) {
+        resolve(chrome.runtime.lastError ? null : resp);
+      });
     });
   }
 
   function renderList(images) {
     listEl.innerHTML = '';
-    images.forEach(function (img, idx) {
+    images.forEach(function (img) {
       var li = document.createElement('li');
       li.className = 'item';
 
       var thumb = document.createElement('img');
       thumb.className = 'thumb';
-      thumb.src = img.url;
+      thumb.src = img.url; // blob: previews can't load cross-origin in the popup; hidden on error
       thumb.alt = img.label;
       thumb.onerror = function () { thumb.style.visibility = 'hidden'; };
 
@@ -49,9 +55,7 @@
       btn.textContent = '下载';
       btn.addEventListener('click', function () {
         btn.disabled = true;
-        sendToBackground({ type: 'download', images: [img] }).then(function () {
-          btn.textContent = '已下载';
-        });
+        sendToContent({ type: 'download', images: [img] }).then(function () { btn.textContent = '已下载'; });
       });
 
       li.appendChild(thumb);
@@ -65,11 +69,12 @@
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       var tab = tabs && tabs[0];
       if (!tab) { setStatus('无法获取当前标签页', true); return; }
+      currentTabId = tab.id;
 
       chrome.tabs.sendMessage(tab.id, { type: 'scan' }, function (resp) {
         if (chrome.runtime.lastError || !resp) {
           pageTypeEl.textContent = '非目标页';
-          setStatus('请在 dreem-world 的角色或场景页面打开本扩展。', true);
+          setStatus('请在 dreem-world 的角色或场景页面打开本扩展（若刚装好扩展，请先刷新页面）。', true);
           return;
         }
         pageTypeEl.textContent = TYPE_LABEL[resp.pageType] || '非目标页';
@@ -97,8 +102,9 @@
   btnAll.addEventListener('click', function () {
     if (!currentImages.length) return;
     btnAll.disabled = true;
-    sendToBackground({ type: 'download', images: currentImages }).then(function () {
-      btnAll.textContent = '已全部下载';
+    btnAll.textContent = '下载中…';
+    sendToContent({ type: 'download', images: currentImages }).then(function (r) {
+      btnAll.textContent = (r && r.failures && r.failures.length) ? ('完成（' + r.failures.length + ' 张失败）') : '已全部下载';
       btnAll.disabled = false;
     });
   });
@@ -108,7 +114,7 @@
     btnZip.disabled = true;
     var orig = btnZip.textContent;
     btnZip.textContent = '打包中…';
-    sendToBackground({ type: 'zip', images: currentImages, zipName: currentPageName }).then(function (r) {
+    sendToContent({ type: 'zip', images: currentImages, zipName: currentPageName }).then(function (r) {
       btnZip.textContent = (r && r.failures && r.failures.length) ? ('完成（' + r.failures.length + ' 张失败）') : '已打包';
       btnZip.disabled = false;
       setTimeout(function () { btnZip.textContent = orig; }, 2500);
