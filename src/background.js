@@ -13,16 +13,6 @@ function downloadOne(image) {
   });
 }
 
-function arrayBufferToBase64(buf) {
-  var bytes = new Uint8Array(buf);
-  var binary = '';
-  var chunk = 0x8000;
-  for (var i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
-
 async function makeZip(images, zipName) {
   var zip = new JSZip();
   var failures = [];
