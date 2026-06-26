@@ -19,5 +19,37 @@
     return 'unknown';
   }
 
-  return { detectPageType: detectPageType };
+  function sanitizeFilename(name) {
+    var cleaned = String(name == null ? '' : name)
+      .replace(/[\\/:*?"<>|\x00-\x1f]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^[.\s]+|[.\s]+$/g, '');
+    return cleaned || 'image';
+  }
+
+  function extFromUrl(url) {
+    try {
+      var path = new URL(url, 'https://x.invalid').pathname;
+      var m = path.match(/\.([a-zA-Z0-9]{1,5})$/);
+      return m ? m[1].toLowerCase() : 'png';
+    } catch (e) {
+      return 'png';
+    }
+  }
+
+  function buildFilename(ctx) {
+    ctx = ctx || {};
+    var base = sanitizeFilename(ctx.pageName || 'dreem');
+    var label = sanitizeFilename(ctx.label || ('img' + (((ctx.index || 0)) + 1)));
+    var ext = sanitizeFilename(String(ctx.ext || 'png')).replace(/^\.+/, '') || 'png';
+    return base + '_' + label + '.' + ext;
+  }
+
+  return {
+    detectPageType: detectPageType,
+    sanitizeFilename: sanitizeFilename,
+    extFromUrl: extFromUrl,
+    buildFilename: buildFilename
+  };
 }));
