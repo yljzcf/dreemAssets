@@ -11,7 +11,6 @@
     var pageName = DreemPageConfig.getPageName(type, document);
     var tiles = DreemPageConfig.scanTiles(document);
     var activeCategory = DreemPageConfig.activeCategoryKey(document);
-    try { console.log('[Dreem下载] 类型=' + type + ' 当前分类=' + activeCategory + ' 变体×' + tiles.length, tiles); } catch (e) {}
     return { ok: true, pageType: type, pageName: pageName, activeCategory: activeCategory, tiles: tiles };
   }
 

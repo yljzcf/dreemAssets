@@ -155,9 +155,10 @@
     im.onerror = function () { im.style.visibility = 'hidden'; };
     im.addEventListener('click', function () {
       im.style.opacity = '.45';
-      sendToContent({ type: 'download', images: [descriptor] }).then(function () {
+      sendToContent({ type: 'download', images: [descriptor] }).then(function (resp) {
         im.style.opacity = '';
-        im.style.outline = '2px solid #16a34a';
+        var failed = !resp || (resp.failures && resp.failures.length);
+        im.style.outline = '2px solid ' + (failed ? '#c0392b' : '#16a34a');
         setTimeout(function () { im.style.outline = ''; }, 1200);
       });
     });

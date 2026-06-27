@@ -1,6 +1,6 @@
 {
   "name": "dreem-world-image-downloader",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "下载 dreem-world studio 角色/场景页面的指定图片的 Chrome 扩展",
   "scripts": {
