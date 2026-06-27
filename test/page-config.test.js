@@ -32,7 +32,8 @@ test('categoryForType: maps artifact types to categories', () => {
   assert.strictEqual(cfg.categoryForType('body_turnaround').key, 'body');
   assert.strictEqual(cfg.categoryForType('expressions').key, 'mood');
   assert.strictEqual(cfg.categoryForType('wardrobe').key, 'outfit');
-  assert.strictEqual(cfg.categoryForType('character_reference').key, 'others');
+  assert.strictEqual(cfg.categoryForType('character_other').key, 'others');
+  assert.strictEqual(cfg.categoryForType('character_reference'), null); // uploaded base ref, not a tab asset
   assert.strictEqual(cfg.categoryForType('unknown_type'), null);
 });
 

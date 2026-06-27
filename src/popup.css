@@ -1,5 +1,5 @@
 :root { color-scheme: light dark; }
-body { width: 360px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", sans-serif; }
+body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", sans-serif; }
 
 .hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(128,128,128,.3); }
 .status-label { font-weight: 600; }
@@ -19,11 +19,14 @@ body { width: 360px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 .status { padding: 8px 12px; color: #888; font-size: 12px; }
 .status.error { color: #c0392b; }
 
-.list { list-style: none; margin: 0; padding: 0 6px 10px; max-height: 440px; overflow-y: auto; }
-.group-label { padding: 8px 8px 2px; font-size: 11px; color: #888; font-weight: 600; }
-.item { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,.15); }
-.thumb { width: 72px; height: 72px; object-fit: contain; border-radius: 4px; background: rgba(128,128,128,.15); flex: none; }
-.meta { flex: 1; min-width: 0; }
-.meta .label { font-weight: 600; word-break: break-all; }
-.meta .sub { color: #888; font-size: 12px; }
-.item .btn { flex: none; padding: 6px 10px; }
+.list { margin: 0; padding: 8px 10px 12px; max-height: 460px; overflow-y: auto; }
+
+/* original (main image): full width, click to download */
+.orig { margin: 6px 0; }
+.orig-img { display: block; width: 100%; max-height: 340px; object-fit: contain; border-radius: 6px; background: rgba(128,128,128,.1); cursor: pointer; transition: outline .1s; }
+
+/* variant row: all variants in one horizontal line, with gaps, click to download */
+.variant-row { display: flex; gap: 8px; overflow-x: auto; padding: 6px 0 4px; }
+.variant-img { height: 100px; width: auto; object-fit: contain; border-radius: 4px; background: rgba(128,128,128,.1); cursor: pointer; flex: none; }
+
+.hint { font-size: 11px; color: #888; padding: 4px 2px 2px; }

@@ -20,7 +20,8 @@
     { key: 'body',   label: 'Body',   tabKey: 'body',    types: ['body_turnaround'] },
     { key: 'mood',   label: 'Mood',   tabKey: 'moods',   types: ['expressions'] },
     { key: 'outfit', label: 'Outfit', tabKey: 'outfits', types: ['wardrobe'] },
-    { key: 'others', label: 'Others', tabKey: 'others',  types: ['character_reference', 'character_other'] }
+    { key: 'others', label: 'Others', tabKey: 'others',  types: ['character_other'] }
+    // note: character_reference is the uploaded base reference (adhoc-assets), not a tab asset
   ];
 
   function categoryForType(type) {

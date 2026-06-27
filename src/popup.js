@@ -73,8 +73,8 @@
     var byCat = {};
     items.forEach(function (it) {
       var cat = DreemPageConfig.categoryForType(it.type);
-      var key = cat ? cat.key : 'others';
-      (byCat[key] = byCat[key] || []).push(it);
+      if (!cat) { try { console.warn('[Dreem下载] 跳过未归类 artifact 类型:', it.type); } catch (e) {} return; }
+      (byCat[cat.key] = byCat[cat.key] || []).push(it);
     });
     CATS.forEach(function (cat) {
       var arr = (byCat[cat.key] || []).slice().sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
@@ -109,28 +109,37 @@
     });
   }
 
-  function renderItem(img) {
-    var li = document.createElement('li');
-    li.className = 'item';
-    var thumb = document.createElement('img');
-    thumb.className = 'thumb';
-    thumb.src = img.url;
-    thumb.alt = img.label;
-    thumb.onerror = function () { thumb.style.visibility = 'hidden'; };
-    var meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.innerHTML = '<div class="label"></div><div class="sub"></div>';
-    meta.querySelector('.label').textContent = img.label;
-    meta.querySelector('.sub').textContent = img.filename;
-    var btn = document.createElement('button');
-    btn.className = 'btn';
-    btn.textContent = '下载';
-    btn.addEventListener('click', function () {
-      btn.disabled = true;
-      sendToContent({ type: 'download', images: [img] }).then(function () { btn.textContent = '已下载'; });
+  // An image that downloads its descriptor when clicked (no buttons/labels).
+  function clickableImg(descriptor, cls) {
+    var im = document.createElement('img');
+    im.className = cls;
+    im.src = descriptor.url;
+    im.alt = descriptor.label;
+    im.title = descriptor.filename;
+    im.onerror = function () { im.style.visibility = 'hidden'; };
+    im.addEventListener('click', function () {
+      im.style.opacity = '.45';
+      sendToContent({ type: 'download', images: [descriptor] }).then(function () {
+        im.style.opacity = '';
+        im.style.outline = '2px solid #16a34a';
+        setTimeout(function () { im.style.outline = ''; }, 1200);
+      });
     });
-    li.appendChild(thumb); li.appendChild(meta); li.appendChild(btn);
-    return li;
+    return im;
+  }
+
+  function appendOriginal(o) {
+    var wrap = document.createElement('div');
+    wrap.className = 'orig';
+    wrap.appendChild(clickableImg(o, 'orig-img'));
+    listEl.appendChild(wrap);
+  }
+
+  function appendVariantRow(vs) {
+    var row = document.createElement('div');
+    row.className = 'variant-row';
+    vs.forEach(function (v) { row.appendChild(clickableImg(v, 'variant-img')); });
+    listEl.appendChild(row);
   }
 
   function activeCategoryKeyMapped() {
@@ -159,24 +168,30 @@
     listEl.innerHTML = '';
     var g = groups[selectedKey] || { originals: [] };
     var origs = g.originals;
-    var items = [];
-    if (selectedKey === mappedActive) {
-      // active category: interleave each original with its variant group (主图 j → 变体 j.x)
-      origs.forEach(function (o, j) {
-        items.push(o);
-        tiles.forEach(function (t) { if (t.group === j) items.push(t); });
-      });
-      tiles.forEach(function (t) { if (t.group >= origs.length) items.push(t); });
-    } else {
-      items = origs.slice();
-    }
-    if (!items.length) {
+    var isActive = (selectedKey === mappedActive);
+    var hasAny = origs.length || (isActive && tiles.length);
+    if (!hasAny) {
       var d = document.createElement('div'); d.className = 'status';
-      d.textContent = (selectedKey === mappedActive) ? '该分类暂无图片' : '该分类暂无原图（切到此分类的网页标签可看变体）';
+      d.textContent = isActive ? '该分类暂无图片' : '该分类暂无原图（切到此分类的网页标签可看变体）';
       listEl.appendChild(d);
       return;
     }
-    items.forEach(function (img) { listEl.appendChild(renderItem(img)); });
+    // each original (big, full-width), and for the active category its variants below (one row)
+    origs.forEach(function (o, j) {
+      appendOriginal(o);
+      if (isActive) {
+        var vs = tiles.filter(function (t) { return t.group === j; });
+        if (vs.length) appendVariantRow(vs);
+      }
+    });
+    if (isActive) {
+      var leftover = tiles.filter(function (t) { return t.group >= origs.length; });
+      if (leftover.length) appendVariantRow(leftover);
+    }
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = '点击单张图片即可按需下载';
+    listEl.appendChild(hint);
   }
 
   async function init() {
