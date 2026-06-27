@@ -1,6 +1,6 @@
 # Dreem 图片下载（Chrome 扩展）
 
-![version](https://img.shields.io/badge/version-0.2.0-2563eb)
+![version](https://img.shields.io/badge/version-0.7-2563eb)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![manifest](https://img.shields.io/badge/Manifest-V3-2563eb)
 ![browser](https://img.shields.io/badge/Chrome%20%2F%20Edge-88%2B-lightgrey)
