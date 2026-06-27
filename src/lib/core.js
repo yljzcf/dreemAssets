@@ -91,13 +91,15 @@
         }
         if (!url || seen[url]) return;
         seen[url] = true;
-        // fileLabel adds an index suffix for multi-image rules; the descriptor's display
-        // `label` stays clean. width/height are display-only — an unloaded image reports
-        // naturalWidth 0, which we coalesce to null so the UI shows no dimensions.
-        var fileLabel = rule.multiple ? ((rule.label || rule.key) + '_' + (i + 1)) : (rule.label || rule.key);
+        // Multi-image rules get a 1-based number in both the display label ("变体 1")
+        // and the filename label ("变体_1"). width/height are display-only — an unloaded
+        // image reports naturalWidth 0, which we coalesce to null so the UI shows nothing.
+        var base = rule.label || rule.key;
+        var fileLabel = rule.multiple ? (base + '_' + (i + 1)) : base;
+        var displayLabel = rule.multiple ? (base + ' ' + (i + 1)) : base;
         out.push({
           key: rule.key,
-          label: rule.label || rule.key,
+          label: displayLabel,
           url: url,
           filename: buildFilename({ pageName: pageName, label: fileLabel, index: i, ext: extFromUrl(url) }),
           width: el.naturalWidth || null,

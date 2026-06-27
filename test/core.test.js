@@ -169,6 +169,8 @@ test('extractImages: multiple:true yields indexed labels', () => {
   var rules = [{ key: 'gallery', label: '画廊', selector: 'img.gallery', multiple: true, getUrl: function (el) { return el.src; } }];
   var out = core.extractImages(doc, rules, { pageName: 'x' });
   assert.strictEqual(out.length, 2);
+  assert.strictEqual(out[0].label, '画廊 1');
+  assert.strictEqual(out[1].label, '画廊 2');
   assert.strictEqual(out[0].filename, 'x_画廊_1.png');
   assert.strictEqual(out[1].filename, 'x_画廊_2.png');
 });

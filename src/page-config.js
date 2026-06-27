@@ -56,14 +56,41 @@
   // adhoc-asset whose height == tile height and width == sum of tile widths.
   // Exposed synchronously here (from tile dimensions); bytes resolved lazily at
   // download time (see resolveSpecial).
+  // Build a preview thumbnail for the source sheet by stitching the already-loaded
+  // tile images side by side (no network fetch). Returns a small data URL, or ''.
+  function buildStitchThumb(tiles, totalW, h) {
+    if (typeof document === 'undefined') return '';
+    try {
+      var scale = Math.min(1, 320 / totalW);
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(totalW * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+      var ctx = canvas.getContext('2d');
+      var x = 0;
+      for (var i = 0; i < tiles.length; i++) {
+        var tw = (tiles[i].naturalWidth || 0) * scale;
+        ctx.drawImage(tiles[i], Math.round(x), 0, Math.round(tw), canvas.height);
+        x += tw;
+      }
+      return canvas.toDataURL('image/png');
+    } catch (e) { return ''; }
+  }
+
   function getDerived(pageType, doc, pageName) {
     if (pageType !== 'character') return [];
-    var m = tileMetrics(doc);
-    if (!m) return [];
+    var tiles = Array.prototype.slice.call(doc.querySelectorAll(TILE_SEL));
+    if (!tiles.length) return [];
+    var h = tiles[0].naturalHeight || 0;
+    var w = 0;
+    for (var i = 0; i < tiles.length; i++) w += (tiles[i].naturalWidth || 0);
+    if (!h || !w) return [];
     var fn = (typeof DreemCore !== 'undefined')
       ? DreemCore.buildFilename({ pageName: pageName, label: '主图', index: 0, ext: 'png' })
       : (pageName + '_主图.png');
-    return [{ key: 'source', label: '主图', kind: 'sourcesheet', width: m.width, height: m.height, filename: fn }];
+    var d = { key: 'source', label: '主图', kind: 'sourcesheet', width: w, height: h, filename: fn };
+    var thumb = buildStitchThumb(tiles, w, h);
+    if (thumb) d.url = thumb; // preview only; bytes still resolved via resolveSpecial
+    return [d];
   }
 
   // Async: return a Blob for descriptors needing special resolution (browser only).
