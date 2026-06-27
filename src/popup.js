@@ -176,20 +176,33 @@
   function appendJustifiedRow(items, rowClass, imgClass) {
     var row = document.createElement('div');
     row.className = rowClass;
-    var gap = 8;
-    var contentW = (listEl.clientWidth || 400) - 22; // minus .list padding (+safety)
-    var sum = 0;
-    items.forEach(function (v) { sum += (v.width && v.height) ? (v.width / v.height) : 1; });
-    var H = sum > 0 ? ((contentW - (items.length - 1) * gap) / sum) : 150;
-    if (items.length === 1) H = Math.min(H, 240); // a lone image shouldn't fill the whole width
-    H = Math.min(H, 360);                          // safety cap for tall (portrait) rows
-    items.forEach(function (v) {
+    var imgs = items.map(function (v) {
       var im = clickableImg(v, imgClass);
-      im.style.height = Math.round(H) + 'px';
       im.style.width = 'auto';
+      im.style.height = '130px'; // provisional until laid out
+      im._knownAspect = (v.width && v.height) ? (v.width / v.height) : 0; // variants know dims; location images don't
       row.appendChild(im);
+      return im;
     });
     listEl.appendChild(row);
+
+    // Compute one row height so the images' natural widths fill the row exactly.
+    // Prefer each image's real naturalWidth/Height; fall back to known dims, then square.
+    function layout() {
+      var gap = 8;
+      var contentW = (listEl.clientWidth || 400) - 22;
+      var sum = 0;
+      imgs.forEach(function (im) {
+        sum += (im.naturalWidth && im.naturalHeight) ? (im.naturalWidth / im.naturalHeight) : (im._knownAspect || 1);
+      });
+      var H = sum > 0 ? ((contentW - (imgs.length - 1) * gap) / sum) : 150;
+      if (imgs.length === 1) H = Math.min(H, 240);
+      H = Math.min(H, 360);
+      imgs.forEach(function (im) { im.style.height = Math.round(H) + 'px'; });
+    }
+
+    layout();
+    imgs.forEach(function (im) { if (!im.complete) im.addEventListener('load', layout); });
   }
 
   // Split a variant group into balanced rows (max 8 per row) so large groups (e.g. 12) wrap.
