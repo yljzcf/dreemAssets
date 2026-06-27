@@ -174,14 +174,19 @@
   function appendOneVariantRow(vs) {
     var row = document.createElement('div');
     row.className = 'variant-row';
+    // Justified: choose one common height H so the images' natural widths (width:auto)
+    // sum to the row width — fills the row, equal heights, and no letterbox/白边.
+    var gap = 8;
+    var contentW = (listEl.clientWidth || 400) - 22; // minus .list padding (+safety)
+    var sumAspect = 0;
+    vs.forEach(function (v) { sumAspect += (v.width && v.height) ? (v.width / v.height) : 0.5; });
+    var H = sumAspect > 0 ? ((contentW - (vs.length - 1) * gap) / sumAspect) : 130;
+    H = Math.max(60, Math.min(H, 240)); // clamp so very-few-variant rows aren't huge
     vs.forEach(function (v) {
-      // justified row: cell width ∝ image aspect → equal heights, fills the row, no crop
-      var cell = document.createElement('div');
-      cell.className = 'variant-cell';
-      var aspect = (v.width && v.height) ? (v.width / v.height) : 1;
-      cell.style.flexGrow = String(aspect);
-      cell.appendChild(clickableImg(v, 'variant-img'));
-      row.appendChild(cell);
+      var im = clickableImg(v, 'variant-img');
+      im.style.height = Math.round(H) + 'px';
+      im.style.width = 'auto';
+      row.appendChild(im);
     });
     listEl.appendChild(row);
   }
