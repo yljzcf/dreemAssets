@@ -1,6 +1,6 @@
 # Dreem 图片下载（Chrome 扩展）
 
-![version](https://img.shields.io/badge/version-0.7-2563eb)
+![version](https://img.shields.io/badge/version-0.7.0-2563eb)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![manifest](https://img.shields.io/badge/Manifest-V3-2563eb)
 ![browser](https://img.shields.io/badge/Chrome%20%2F%20Edge-88%2B-lightgrey)
@@ -79,7 +79,7 @@
 | `src/content.js` | 内容脚本：响应 popup 的 `scan`（返回页面类型、名称、当前分类、变体）与 `download`/`zip`（在页面内 fetch 字节 + 保存/打包，支持 `blob:` 与签名 URL）。 |
 | `src/popup.{html,css,js}` | 弹窗 UI：编排 scan + 取原图 + 渲染（角色分标签 / 场景扁平）+ 下载。 |
 | `src/lib/jszip.min.js` | 第三方库（[JSZip](https://stuk.github.io/jszip/)，MIT），用于在页面内打包 ZIP。 |
-| `src/icons/icon-*.png` | 扩展图标（当前为占位图，见[替换图标](#替换图标)）。 |
+| `src/icons/icon-*.png` | 扩展图标（如需更换见[替换图标](#替换图标)）。 |
 
 **原图来源（关键）**：原图不在 DOM 里。popup 通过 `chrome.scripting.executeScript({world:'MAIN'})` 在页面主世界用 `window.Clerk.session.getToken()` 取 Clerk token，POST `api.dreem-world.ai/api/worlds/<id>/artifacts/query`（body `{scope:{kind:'character'|'location', id}}`），返回每个 artifact 的 `presignedUrl`，按 `type` 归类。
 
@@ -97,7 +97,7 @@ node --test   # core.js 与 page-config.js 的单元测试
 
 ## 替换图标
 
-`src/icons/icon-{16,32,48,128}.png` 当前是程序生成的**占位图标**。如需替换为正式图标：
+如需更换扩展图标 `src/icons/icon-{16,32,48,128}.png`：
 
 1. 参考 [`docs/icon-prompt.md`](docs/icon-prompt.md) 里的提示词用 AI 生成 1024×1024 图标。
 2. 导出为 `16 / 32 / 48 / 128` 四个尺寸的 PNG（建议保留透明背景）。
