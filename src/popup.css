@@ -20,7 +20,8 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 .status { padding: 8px 12px; color: #888; font-size: 12px; }
 .status.error { color: #c0392b; }
 
-.list { margin: 0; padding: 8px 10px 12px; max-height: 460px; overflow-y: auto; }
+/* no fixed height: the popup auto-sizes to content (Chrome caps the popup at ~600px) */
+.list { margin: 0; padding: 8px 10px 12px; }
 
 /* original (main image): full width, click to download */
 .orig { margin: 6px 0; }
