@@ -1,23 +1,18 @@
 (function () {
   'use strict';
 
-  // --- scan: detect page type, extract tiles, and grab the source sheet(s) ---
+  // --- scan: detect page type + current category's variant crops (tiles) ---
+  // Originals are fetched separately by the popup via the artifacts API.
   function scan() {
     var type = DreemCore.detectPageType(location.href);
     if (type === 'unknown') {
-      return Promise.resolve({ ok: false, reason: 'not-target-page', pageType: type });
+      return { ok: false, reason: 'not-target-page', pageType: type };
     }
     var rules = DreemPageConfig.getRules(type);
     var pageName = DreemPageConfig.getPageName(type, document);
     var tiles = DreemCore.extractImages(document, rules, { pageName: pageName });
-    var mainsP = DreemPageConfig.getMainImages
-      ? DreemPageConfig.getMainImages(type, document, pageName)
-      : Promise.resolve([]);
-    return mainsP.then(function (mains) {
-      var images = mains.concat(tiles); // main image(s) first, then variants
-      try { console.log('[Dreem下载] 类型=' + type + ' 主图×' + mains.length + ' 变体×' + tiles.length, images); } catch (e) {}
-      return { ok: true, pageType: type, pageName: pageName, images: images };
-    });
+    try { console.log('[Dreem下载] 类型=' + type + ' 当前分类变体×' + tiles.length, tiles); } catch (e) {}
+    return { ok: true, pageType: type, pageName: pageName, tiles: tiles };
   }
 
   // --- downloading happens in the page context so blob: and signed URLs resolve ---
@@ -78,8 +73,8 @@
   chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
     if (!msg) return false;
     if (msg.type === 'scan') {
-      scan().then(sendResponse).catch(function (e) { sendResponse({ ok: false, reason: 'scan-error', error: String(e) }); });
-      return true; // async (opens/closes the source-sheet dialog)
+      try { sendResponse(scan()); } catch (e) { sendResponse({ ok: false, reason: 'scan-error', error: String(e) }); }
+      return false; // synchronous
     }
     if (msg.type === 'download') {
       downloadEach(msg.images || []).then(sendResponse);

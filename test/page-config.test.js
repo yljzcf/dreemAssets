@@ -23,13 +23,14 @@ test('getRules: character has the tile rule', () => {
   assert.deepStrictEqual(keys, ['tile']);
 });
 
-test('getMainImages: non-character types resolve to an empty list', async () => {
-  assert.deepStrictEqual(await cfg.getMainImages('location', {}, 'x'), []);
+test('artifactLabel: maps known artifact types to labels', () => {
+  assert.strictEqual(cfg.artifactLabel('wardrobe'), '穿搭');
+  assert.strictEqual(cfg.artifactLabel('head_turnaround'), '头部转身');
+  assert.strictEqual(cfg.artifactLabel('expressions'), '表情');
 });
 
-test('getMainImages: no "View original" buttons resolves to an empty list', async () => {
-  var fakeDoc = { querySelectorAll: function () { return []; } };
-  assert.deepStrictEqual(await cfg.getMainImages('character', fakeDoc, 'x'), []);
+test('artifactLabel: unknown type falls back to the raw type string', () => {
+  assert.strictEqual(cfg.artifactLabel('something_new'), 'something_new');
 });
 
 test('getPageName: character uses the portrait alt as the name', () => {

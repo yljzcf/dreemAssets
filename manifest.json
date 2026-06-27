@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Dreem 图片下载",
-  "version": "0.1.0",
-  "description": "下载 dreem-world studio 角色/场景页面上的指定图片，支持打包或分张下载。",
+  "version": "0.2.0",
+  "description": "下载 dreem-world studio 角色页的原图（全部分类）与当前分类的变体裁剪图，支持打包或分张下载。",
+  "permissions": ["scripting"],
   "host_permissions": ["https://studio.dreem-world.ai/*", "https://*.cloudfront.net/*"],
   "action": {
     "default_popup": "src/popup.html",
