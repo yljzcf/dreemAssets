@@ -3,7 +3,7 @@
   "name": "Dreem 图片下载",
   "version": "0.1.0",
   "description": "下载 dreem-world studio 角色/场景页面上的指定图片，支持打包或分张下载。",
-  "host_permissions": ["https://studio.dreem-world.ai/*"],
+  "host_permissions": ["https://studio.dreem-world.ai/*", "https://*.cloudfront.net/*"],
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "Dreem 图片下载"

@@ -18,9 +18,34 @@ test('getPageName: falls back to a non-empty string', () => {
   assert.ok(name.length > 0);
 });
 
-test('getRules: character has portrait then tile rules', () => {
+test('getRules: character has the tile rule', () => {
   var keys = cfg.getRules('character').map(function (r) { return r.key; });
-  assert.deepStrictEqual(keys, ['portrait', 'tile']);
+  assert.deepStrictEqual(keys, ['tile']);
+});
+
+test('getDerived: character derives a source-sheet descriptor from tile metrics', () => {
+  var fakeDoc = {
+    querySelectorAll: function (sel) {
+      if (sel.indexOf('Tile') > -1) return [
+        { naturalWidth: 949, naturalHeight: 1280 },
+        { naturalWidth: 971, naturalHeight: 1280 },
+        { naturalWidth: 968, naturalHeight: 1280 },
+        { naturalWidth: 952, naturalHeight: 1280 }
+      ];
+      return [];
+    }
+  };
+  var d = cfg.getDerived('character', fakeDoc, 'Leon');
+  assert.strictEqual(d.length, 1);
+  assert.strictEqual(d[0].kind, 'sourcesheet');
+  assert.strictEqual(d[0].width, 3840);
+  assert.strictEqual(d[0].height, 1280);
+  assert.strictEqual(d[0].filename, 'Leon_主图.png');
+});
+
+test('getDerived: no tiles means no source sheet', () => {
+  var fakeDoc = { querySelectorAll: function () { return []; } };
+  assert.deepStrictEqual(cfg.getDerived('character', fakeDoc, 'x'), []);
 });
 
 test('getPageName: character uses the portrait alt as the name', () => {
