@@ -138,7 +138,15 @@
   function appendVariantRow(vs) {
     var row = document.createElement('div');
     row.className = 'variant-row';
-    vs.forEach(function (v) { row.appendChild(clickableImg(v, 'variant-img')); });
+    vs.forEach(function (v) {
+      // justified row: cell width ∝ image aspect → equal heights, fills the row, no crop
+      var cell = document.createElement('div');
+      cell.className = 'variant-cell';
+      var aspect = (v.width && v.height) ? (v.width / v.height) : 1;
+      cell.style.flexGrow = String(aspect);
+      cell.appendChild(clickableImg(v, 'variant-img'));
+      row.appendChild(cell);
+    });
     listEl.appendChild(row);
   }
 

@@ -27,9 +27,11 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 .orig { margin: 6px 0; }
 .orig-img { display: block; width: 100%; max-height: 340px; object-fit: contain; border-radius: 6px; background: rgba(128,128,128,.1); cursor: pointer; }
 
-/* variant row: variants share the full row width evenly (no right gap), click to download */
-.variant-row { display: flex; gap: 8px; padding: 6px 0 4px; }
-.variant-img { flex: 1 1 0; min-width: 0; height: 130px; object-fit: contain; border-radius: 4px; background: rgba(128,128,128,.1); cursor: pointer; }
+/* variant row: justified — each cell's width ∝ its image aspect, so all images share
+   one height and the row is exactly filled, with no cropping. Click to download. */
+.variant-row { display: flex; gap: 8px; padding: 6px 0 4px; align-items: flex-start; }
+.variant-cell { flex: 1 1 0; min-width: 0; } /* flex-grow overridden inline per aspect */
+.variant-img { display: block; width: 100%; height: auto; max-height: 300px; object-fit: contain; border-radius: 4px; background: rgba(128,128,128,.1); cursor: pointer; }
 
 /* Others grid: 2 or 3 images per row, sharing the row width */
 .grid-row { display: flex; gap: 8px; margin: 6px 0; }
