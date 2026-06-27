@@ -23,14 +23,30 @@ test('getRules: character has the tile rule', () => {
   assert.deepStrictEqual(keys, ['tile']);
 });
 
-test('artifactLabel: maps known artifact types to labels', () => {
-  assert.strictEqual(cfg.artifactLabel('wardrobe'), '穿搭');
-  assert.strictEqual(cfg.artifactLabel('head_turnaround'), '头部转身');
-  assert.strictEqual(cfg.artifactLabel('expressions'), '表情');
+test('CATEGORIES: 5 categories with the expected keys', () => {
+  assert.deepStrictEqual(cfg.CATEGORIES.map(function (c) { return c.key; }), ['face', 'body', 'mood', 'outfit', 'others']);
 });
 
-test('artifactLabel: unknown type falls back to the raw type string', () => {
-  assert.strictEqual(cfg.artifactLabel('something_new'), 'something_new');
+test('categoryForType: maps artifact types to categories', () => {
+  assert.strictEqual(cfg.categoryForType('head_turnaround').key, 'face');
+  assert.strictEqual(cfg.categoryForType('body_turnaround').key, 'body');
+  assert.strictEqual(cfg.categoryForType('expressions').key, 'mood');
+  assert.strictEqual(cfg.categoryForType('wardrobe').key, 'outfit');
+  assert.strictEqual(cfg.categoryForType('character_reference').key, 'others');
+  assert.strictEqual(cfg.categoryForType('unknown_type'), null);
+});
+
+test('categoryByTabKey: maps webpage tab keys to categories', () => {
+  assert.strictEqual(cfg.categoryByTabKey('moods').key, 'mood');
+  assert.strictEqual(cfg.categoryByTabKey('outfits').key, 'outfit');
+  assert.strictEqual(cfg.categoryByTabKey('nope'), null);
+});
+
+test('activeCategoryKey: reads the active tab id suffix', () => {
+  var fakeDoc = { querySelector: function (sel) {
+    return sel.indexOf('active') > -1 ? { id: 'radix-_r_k_-trigger-outfits' } : null;
+  } };
+  assert.strictEqual(cfg.activeCategoryKey(fakeDoc), 'outfits');
 });
 
 test('getPageName: character uses the portrait alt as the name', () => {

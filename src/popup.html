@@ -6,14 +6,11 @@
 </head>
 <body>
   <header class="hdr">
-    <span class="title">Dreem 图片下载</span>
-    <span id="pageType" class="badge">检测中…</span>
+    <span id="pageType" class="status-label">检测中…</span>
+    <button id="btnAssets" class="btn primary" hidden>下载资产原图</button>
   </header>
 
-  <div id="topActions" class="top-actions" hidden>
-    <button id="btnZip" class="btn primary">下载原图 ZIP</button>
-    <button id="btnAll" class="btn">原图+裁切 ZIP</button>
-  </div>
+  <nav id="tabs" class="tabs" hidden></nav>
 
   <div id="status" class="status">正在扫描页面…</div>
   <ul id="list" class="list"></ul>

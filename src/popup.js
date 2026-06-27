@@ -1,22 +1,24 @@
 (function () {
   'use strict';
 
+  var pageTypeEl = document.getElementById('pageType');
+  var btnAssets = document.getElementById('btnAssets');
+  var tabsEl = document.getElementById('tabs');
   var statusEl = document.getElementById('status');
   var listEl = document.getElementById('list');
-  var topActions = document.getElementById('topActions');
-  var pageTypeEl = document.getElementById('pageType');
-  var btnZip = document.getElementById('btnZip'); // 下载原图 ZIP
-  var btnAll = document.getElementById('btnAll'); // 原图+裁切 ZIP
 
-  var currentTabId = null;
-  var currentPageName = 'dreem';
-  var originalDescriptors = []; // from artifacts API
-  var tileDescriptors = [];     // from DOM (current category)
-
+  var CATS = DreemPageConfig.CATEGORIES;
   var TYPE_LABEL = { character: '角色页', location: '场景页', unknown: '非目标页' };
 
-  // Injected into the PAGE main world: read the Clerk token and query the
-  // artifacts API for every original image of the current character.
+  var currentTabId = null;
+  var pageName = 'dreem';
+  var activeCatKey = null;       // webpage's active category key (e.g. 'outfits')
+  var groups = {};               // category.key -> { category, originals:[desc] }
+  var tiles = [];                // current category's variant descriptors
+  var allOriginals = [];         // flat list for the ZIP
+  var selectedKey = null;        // selected popup tab (category key)
+
+  // Injected into the PAGE main world: Clerk token + artifacts API → all originals.
   function fetchOriginalsInPage() {
     return (async function () {
       try {
@@ -27,8 +29,7 @@
         var token = await window.Clerk.session.getToken();
         if (!token) return { ok: false, error: 'no-token' };
         var resp = await fetch('https://api.dreem-world.ai/api/worlds/' + wid + '/artifacts/query', {
-          method: 'POST',
-          credentials: 'include',
+          method: 'POST', credentials: 'include',
           headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + token },
           body: JSON.stringify({ scope: { kind: 'character', id: cid } })
         });
@@ -38,18 +39,10 @@
         return {
           ok: true,
           items: items.filter(function (it) { return it && it.presignedUrl; }).map(function (it) {
-            return {
-              type: it.type,
-              isPrimary: !!it.isPrimary,
-              sortOrder: it.sortOrder || 0,
-              variantName: (it.data && typeof it.data === 'object' && it.data.variantName) || null,
-              url: it.presignedUrl
-            };
+            return { type: it.type, sortOrder: it.sortOrder || 0, url: it.presignedUrl };
           })
         };
-      } catch (e) {
-        return { ok: false, error: String(e).slice(0, 140) };
-      }
+      } catch (e) { return { ok: false, error: String(e).slice(0, 140) }; }
     })();
   }
 
@@ -68,49 +61,64 @@
     });
   }
 
-  // Build original-image descriptors, labeling + numbering duplicates per category.
-  function buildOriginalDescriptors(items, pageName) {
-    var counts = {};
-    items.forEach(function (it) { counts[it.type] = (counts[it.type] || 0) + 1; });
-    var sorted = items.slice().sort(function (a, b) {
-      if (a.type < b.type) return -1;
-      if (a.type > b.type) return 1;
-      return (a.sortOrder || 0) - (b.sortOrder || 0);
+  function fileName(suffix, url) {
+    return DreemCore.buildFilename({ pageName: pageName, label: suffix, index: 0, ext: DreemCore.extFromUrl(url || '') });
+  }
+
+  // Group API originals into the 5 categories and build descriptors + filenames.
+  function buildGroups(items) {
+    groups = {};
+    allOriginals = [];
+    CATS.forEach(function (cat) { groups[cat.key] = { category: cat, originals: [] }; });
+    var byCat = {};
+    items.forEach(function (it) {
+      var cat = DreemPageConfig.categoryForType(it.type);
+      var key = cat ? cat.key : 'others';
+      (byCat[key] = byCat[key] || []).push(it);
     });
-    var seen = {};
-    return sorted.map(function (it) {
-      var base = DreemPageConfig.artifactLabel(it.type);
-      var multi = counts[it.type] > 1;
-      var n = (seen[it.type] = (seen[it.type] || 0) + 1);
-      var disp = multi ? (base + ' ' + n) : base;
-      var fileLabel = multi ? (base + '_' + n) : base;
+    CATS.forEach(function (cat) {
+      var arr = (byCat[cat.key] || []).slice().sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
+      var multi = arr.length > 1;
+      arr.forEach(function (it, i) {
+        var suffix = multi ? (cat.key + '_' + (i + 1) + '_full') : (cat.key + '_full');
+        var d = {
+          url: it.url, kind: 'original', categoryKey: cat.key,
+          label: multi ? ('主图 ' + (i + 1)) : '主图',
+          filename: fileName(suffix, it.url)
+        };
+        groups[cat.key].originals.push(d);
+        allOriginals.push(d);
+      });
+    });
+  }
+
+  // Build variant descriptors for the active category from the DOM tiles.
+  function buildTiles(scanTiles) {
+    var cat = activeCatKey ? DreemPageConfig.categoryByTabKey(activeCatKey) : null;
+    var key = cat ? cat.key : (activeCatKey || 'var');
+    tiles = (scanTiles || []).map(function (t, i) {
       return {
-        url: it.url,
-        label: disp,
-        filename: DreemCore.buildFilename({ pageName: pageName, label: fileLabel, index: n - 1, ext: DreemCore.extFromUrl(it.url) }),
-        kind: 'original'
+        url: t.url, kind: 'variant', categoryKey: key,
+        label: '变体 ' + (i + 1), width: t.width, height: t.height,
+        filename: fileName(key + '_' + (i + 1), t.url)
       };
     });
+    return key;
   }
 
   function renderItem(img) {
     var li = document.createElement('li');
     li.className = 'item';
-
     var thumb = document.createElement('img');
     thumb.className = 'thumb';
     thumb.src = img.url;
     thumb.alt = img.label;
     thumb.onerror = function () { thumb.style.visibility = 'hidden'; };
-
     var meta = document.createElement('div');
     meta.className = 'meta';
-    meta.innerHTML = '<div class="label"></div><div class="dim"></div>';
+    meta.innerHTML = '<div class="label"></div><div class="sub"></div>';
     meta.querySelector('.label').textContent = img.label;
-    meta.querySelector('.dim').textContent = (img.kind === 'original')
-      ? '原图'
-      : ((img.width && img.height) ? (img.width + '×' + img.height) : '变体');
-
+    meta.querySelector('.sub').textContent = img.filename;
     var btn = document.createElement('button');
     btn.className = 'btn';
     btn.textContent = '下载';
@@ -118,29 +126,44 @@
       btn.disabled = true;
       sendToContent({ type: 'download', images: [img] }).then(function () { btn.textContent = '已下载'; });
     });
-
-    li.appendChild(thumb);
-    li.appendChild(meta);
-    li.appendChild(btn);
+    li.appendChild(thumb); li.appendChild(meta); li.appendChild(btn);
     return li;
   }
 
-  function renderList() {
-    listEl.innerHTML = '';
-    originalDescriptors.forEach(function (img) { listEl.appendChild(renderItem(img)); });
-    tileDescriptors.forEach(function (img) { listEl.appendChild(renderItem(img)); });
+  function activeCategoryKeyMapped() {
+    var cat = activeCatKey ? DreemPageConfig.categoryByTabKey(activeCatKey) : null;
+    return cat ? cat.key : null;
   }
 
-  function zipDownload(images, btn) {
-    if (!images.length) return;
-    btn.disabled = true;
-    var orig = btn.textContent;
-    btn.textContent = '打包中…';
-    sendToContent({ type: 'zip', images: images, zipName: currentPageName }).then(function (r) {
-      btn.textContent = (r && r.failures && r.failures.length) ? ('完成（' + r.failures.length + ' 失败）') : '已打包';
-      btn.disabled = false;
-      setTimeout(function () { btn.textContent = orig; }, 2500);
+  function render() {
+    // tabs
+    tabsEl.innerHTML = '';
+    var mappedActive = activeCategoryKeyMapped();
+    CATS.forEach(function (cat) {
+      var n = groups[cat.key] ? groups[cat.key].originals.length : 0;
+      var isActiveCat = (cat.key === mappedActive);
+      var btn = document.createElement('button');
+      btn.className = 'tab' + (cat.key === selectedKey ? ' active' : '');
+      var count = n + (isActiveCat && tiles.length ? ('+' + tiles.length) : '');
+      btn.innerHTML = '';
+      btn.appendChild(document.createTextNode(cat.label));
+      var c = document.createElement('span'); c.className = 'count'; c.textContent = count; btn.appendChild(c);
+      btn.addEventListener('click', function () { selectedKey = cat.key; render(); });
+      tabsEl.appendChild(btn);
     });
+
+    // content for selected tab
+    listEl.innerHTML = '';
+    var g = groups[selectedKey] || { originals: [] };
+    var items = g.originals.slice();
+    if (selectedKey === mappedActive) items = items.concat(tiles); // variants only for the page's active category
+    if (!items.length) {
+      var d = document.createElement('div'); d.className = 'status';
+      d.textContent = (selectedKey === mappedActive) ? '该分类暂无图片' : '该分类暂无原图（切到此分类的网页标签可看变体）';
+      listEl.appendChild(d);
+      return;
+    }
+    items.forEach(function (img) { listEl.appendChild(renderItem(img)); });
   }
 
   async function init() {
@@ -149,48 +172,58 @@
     if (!tab) { setStatus('无法获取当前标签页', true); return; }
     currentTabId = tab.id;
 
-    // 1) current category's variant crops + page info (content script)
-    var scanResp = await sendToContent({ type: 'scan' });
-    if (!scanResp) {
+    var scan = await sendToContent({ type: 'scan' });
+    if (!scan) {
       pageTypeEl.textContent = '非目标页';
       setStatus('请在 dreem-world 的角色页打开本扩展（若刚装好扩展，请先刷新页面）。', true);
       return;
     }
-    pageTypeEl.textContent = TYPE_LABEL[scanResp.pageType] || '非目标页';
-    if (!scanResp.ok) { setStatus('请在角色页打开本扩展。', true); return; }
-    currentPageName = scanResp.pageName || 'dreem';
-    tileDescriptors = scanResp.tiles || [];
+    pageTypeEl.textContent = TYPE_LABEL[scan.pageType] || '非目标页';
+    if (!scan.ok || scan.pageType !== 'character') {
+      setStatus(scan.pageType === 'location' ? '场景页暂未支持。' : '请在角色页打开本扩展。', true);
+      return;
+    }
+    pageName = scan.pageName || 'dreem';
+    activeCatKey = scan.activeCategory || null;
+    buildTiles(scan.tiles || []);
 
-    // 2) all originals via the artifacts API (run in the page's main world)
     setStatus('正在获取原图…', false);
     var originals = null;
     try {
       var injected = await chrome.scripting.executeScript({ target: { tabId: currentTabId }, world: 'MAIN', func: fetchOriginalsInPage });
       originals = injected && injected[0] && injected[0].result;
-    } catch (e) {
-      originals = { ok: false, error: String(e).slice(0, 140) };
-    }
-    if (originals && originals.ok) {
-      originalDescriptors = buildOriginalDescriptors(originals.items || [], currentPageName);
-    } else {
-      originalDescriptors = [];
-      try { console.warn('[Dreem下载] 获取原图失败:', originals && originals.error); } catch (e) {}
-    }
+    } catch (e) { originals = { ok: false, error: String(e).slice(0, 140) }; }
 
-    if (!originalDescriptors.length && !tileDescriptors.length) {
+    buildGroups(originals && originals.ok ? originals.items : []);
+
+    if (!allOriginals.length && !tiles.length) {
       setStatus('未找到任何图片' + (originals && !originals.ok ? ('（原图获取失败：' + originals.error + '）') : '') + '。', true);
       return;
     }
 
-    var note = '原图 ' + originalDescriptors.length + ' 张 · 当前分类变体 ' + tileDescriptors.length + ' 张';
+    var note = '原图 ' + allOriginals.length + ' 张';
+    var mapped = activeCategoryKeyMapped();
+    if (mapped) note += ' · 当前分类(' + mapped + ')变体 ' + tiles.length + ' 张';
     if (originals && !originals.ok) note += '（原图获取失败：' + originals.error + '）';
     setStatus(note, !!(originals && !originals.ok));
-    topActions.hidden = false;
-    renderList();
+
+    selectedKey = mapped || (allOriginals[0] ? allOriginals[0].categoryKey : CATS[0].key);
+    btnAssets.hidden = !allOriginals.length;
+    tabsEl.hidden = false;
+    render();
   }
 
-  btnZip.addEventListener('click', function () { zipDownload(originalDescriptors, btnZip); });
-  btnAll.addEventListener('click', function () { zipDownload(originalDescriptors.concat(tileDescriptors), btnAll); });
+  btnAssets.addEventListener('click', function () {
+    if (!allOriginals.length) return;
+    btnAssets.disabled = true;
+    var orig = btnAssets.textContent;
+    btnAssets.textContent = '打包中…';
+    sendToContent({ type: 'zip', images: allOriginals, zipName: pageName + '_assets' }).then(function (r) {
+      btnAssets.textContent = (r && r.failures && r.failures.length) ? ('完成（' + r.failures.length + ' 失败）') : '已打包';
+      btnAssets.disabled = false;
+      setTimeout(function () { btnAssets.textContent = orig; }, 2500);
+    });
+  });
 
   init();
 })();
