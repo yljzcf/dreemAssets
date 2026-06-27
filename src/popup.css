@@ -24,16 +24,14 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 .list { margin: 0; padding: 8px 10px 12px; }
 
 /* original (main image): full width, click to download */
-.orig { margin: 6px 0; }
-.orig-img { display: block; width: 100%; max-height: 340px; object-fit: contain; border-radius: 6px; background: rgba(128,128,128,.1); cursor: pointer; }
+.orig { margin: 6px 0; text-align: center; }
+.orig-img { display: block; max-width: 100%; max-height: 340px; width: auto; height: auto; margin: 0 auto; border-radius: 6px; cursor: pointer; }
 
-/* variant row: justified — all images share one height (set inline) with width:auto,
-   so their natural widths fill the row exactly. No object-fit → no letterbox. */
-.variant-row { display: flex; gap: 8px; padding: 6px 0 4px; align-items: flex-start; }
-.variant-img { display: block; height: 130px; width: auto; border-radius: 4px; cursor: pointer; }
-
-/* Others grid: 2 or 3 images per row, sharing the row width */
-.grid-row { display: flex; gap: 8px; margin: 6px 0; }
-.grid-img { flex: 1 1 0; min-width: 0; height: 160px; object-fit: contain; border-radius: 6px; background: rgba(128,128,128,.1); cursor: pointer; }
+/* justified rows (variants + grids): images share one inline-set height with width:auto,
+   so their natural widths fill the row — any orientation, no letterbox. */
+.variant-row, .grid-row { display: flex; gap: 8px; align-items: flex-start; }
+.variant-row { padding: 6px 0 4px; }
+.grid-row { margin: 6px 0; }
+.variant-img, .grid-img { display: block; width: auto; height: 130px; border-radius: 4px; cursor: pointer; }
 
 .hint { font-size: 11px; color: #888; padding: 4px 2px 2px; }

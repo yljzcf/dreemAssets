@@ -171,19 +171,20 @@
     listEl.appendChild(wrap);
   }
 
-  function appendOneVariantRow(vs) {
+  // A justified row: all images share one computed height so their natural widths
+  // (width:auto) sum to the row width. Works for any orientation; never letterboxes.
+  function appendJustifiedRow(items, rowClass, imgClass) {
     var row = document.createElement('div');
-    row.className = 'variant-row';
-    // Justified: choose one common height H so the images' natural widths (width:auto)
-    // sum to the row width — fills the row, equal heights, and no letterbox/白边.
+    row.className = rowClass;
     var gap = 8;
     var contentW = (listEl.clientWidth || 400) - 22; // minus .list padding (+safety)
-    var sumAspect = 0;
-    vs.forEach(function (v) { sumAspect += (v.width && v.height) ? (v.width / v.height) : 0.5; });
-    var H = sumAspect > 0 ? ((contentW - (vs.length - 1) * gap) / sumAspect) : 130;
-    H = Math.max(60, Math.min(H, 240)); // clamp so very-few-variant rows aren't huge
-    vs.forEach(function (v) {
-      var im = clickableImg(v, 'variant-img');
+    var sum = 0;
+    items.forEach(function (v) { sum += (v.width && v.height) ? (v.width / v.height) : 1; });
+    var H = sum > 0 ? ((contentW - (items.length - 1) * gap) / sum) : 150;
+    if (items.length === 1) H = Math.min(H, 240); // a lone image shouldn't fill the whole width
+    H = Math.min(H, 360);                          // safety cap for tall (portrait) rows
+    items.forEach(function (v) {
+      var im = clickableImg(v, imgClass);
       im.style.height = Math.round(H) + 'px';
       im.style.width = 'auto';
       row.appendChild(im);
@@ -194,10 +195,10 @@
   // Split a variant group into balanced rows (max 8 per row) so large groups (e.g. 12) wrap.
   function appendVariantRow(vs) {
     var maxPer = 8;
-    if (vs.length <= maxPer) { appendOneVariantRow(vs); return; }
+    if (vs.length <= maxPer) { appendJustifiedRow(vs, 'variant-row', 'variant-img'); return; }
     var nRows = Math.ceil(vs.length / maxPer);
     var per = Math.ceil(vs.length / nRows);
-    for (var i = 0; i < vs.length; i += per) appendOneVariantRow(vs.slice(i, i + per));
+    for (var i = 0; i < vs.length; i += per) appendJustifiedRow(vs.slice(i, i + per), 'variant-row', 'variant-img');
   }
 
   // Others layout: 2 per row, but an odd count >= 3 puts 3 in the last row.
@@ -218,10 +219,8 @@
     var sizes = othersRowSizes(origs.length);
     var idx = 0;
     sizes.forEach(function (size) {
-      var row = document.createElement('div');
-      row.className = 'grid-row';
-      for (var k = 0; k < size && idx < origs.length; k++) { row.appendChild(clickableImg(origs[idx++], 'grid-img')); }
-      listEl.appendChild(row);
+      appendJustifiedRow(origs.slice(idx, idx + size), 'grid-row', 'grid-img');
+      idx += size;
     });
   }
 
