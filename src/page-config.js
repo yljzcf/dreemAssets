@@ -87,12 +87,22 @@
         var p = doc.querySelector(PORTRAIT_SEL);
         if (p && p.alt) return p.alt;
       }
+      if (pageType === 'location') {
+        var h = doc.querySelector('h2'); // the location name is the first <h2>
+        if (h && h.textContent) return h.textContent.trim();
+      }
       var title = (doc && doc.title) ? String(doc.title).split('—')[0].split('|')[0].trim() : '';
       return title || 'dreem';
     } catch (e) {
       return 'dreem';
     }
   }
+
+  // Location artifact types → label + filename key (locations are flat: no tabs/variants).
+  var LOCATION_LABELS = { location_fullshot: '全景图', location_angles: '角度图' };
+  var LOCATION_KEYS = { location_fullshot: 'fullshot', location_angles: 'angle' };
+  function locationLabel(type) { return LOCATION_LABELS[type] || String(type || 'image'); }
+  function locationKey(type) { return LOCATION_KEYS[type] || String(type || 'image'); }
 
   return {
     EXTRACTORS: EXTRACTORS,
@@ -102,6 +112,8 @@
     activeCategoryKey: activeCategoryKey,
     getRules: getRules,
     scanTiles: scanTiles,
-    getPageName: getPageName
+    getPageName: getPageName,
+    locationLabel: locationLabel,
+    locationKey: locationKey
   };
 }));

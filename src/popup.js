@@ -22,16 +22,19 @@
   function fetchOriginalsInPage() {
     return (async function () {
       try {
-        var m = location.pathname.match(/\/worlds\/([^/]+)\/characters\/([^/]+)/);
-        if (!m) return { ok: false, error: 'not-character-page' };
-        var wid = m[1], cid = m[2];
+        var mc = location.pathname.match(/\/worlds\/([^/]+)\/characters\/([^/]+)/);
+        var ml = location.pathname.match(/\/worlds\/([^/]+)\/locations\/([^/]+)/);
+        var wid, scope;
+        if (mc) { wid = mc[1]; scope = { kind: 'character', id: mc[2] }; }
+        else if (ml) { wid = ml[1]; scope = { kind: 'location', id: ml[2] }; }
+        else return { ok: false, error: 'unsupported-page' };
         if (!(window.Clerk && window.Clerk.session)) return { ok: false, error: 'clerk-unavailable' };
         var token = await window.Clerk.session.getToken();
         if (!token) return { ok: false, error: 'no-token' };
         var resp = await fetch('https://api.dreem-world.ai/api/worlds/' + wid + '/artifacts/query', {
           method: 'POST', credentials: 'include',
           headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + token },
-          body: JSON.stringify({ scope: { kind: 'character', id: cid } })
+          body: JSON.stringify({ scope: scope })
         });
         if (!resp.ok) return { ok: false, error: 'http-' + resp.status };
         var j = await resp.json();
@@ -65,6 +68,38 @@
     return DreemCore.buildFilename({ pageName: pageName, label: suffix, index: 0, ext: DreemCore.extFromUrl(url || '') });
   }
 
+  // Creation order: sortOrder, then createdAt, then id (ascending).
+  function byCreated(a, b) {
+    if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+    return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+  }
+
+  // Location pages are flat: group originals by type (fullshot, angles, …), number duplicates.
+  function buildLocationList(items) {
+    var byType = {};
+    items.forEach(function (it) { (byType[it.type] = byType[it.type] || []).push(it); });
+    var order = ['location_fullshot', 'location_angles'];
+    var types = Object.keys(byType).sort(function (a, b) {
+      var ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    allOriginals = [];
+    types.forEach(function (type) {
+      var arr = byType[type].slice().sort(byCreated);
+      var key = DreemPageConfig.locationKey(type);
+      var label = DreemPageConfig.locationLabel(type);
+      var multi = arr.length > 1;
+      arr.forEach(function (it, i) {
+        allOriginals.push({
+          url: it.url, kind: 'original',
+          label: multi ? (label + ' ' + (i + 1)) : label,
+          filename: fileName(multi ? (key + '_' + (i + 1)) : key, it.url)
+        });
+      });
+    });
+  }
+
   // Group API originals into the 5 categories and build descriptors + filenames.
   function buildGroups(items) {
     groups = {};
@@ -77,11 +112,7 @@
       (byCat[cat.key] = byCat[cat.key] || []).push(it);
     });
     CATS.forEach(function (cat) {
-      var arr = (byCat[cat.key] || []).slice().sort(function (a, b) {
-        if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
-        if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1; // oldest first → matches "Outfit 1,2,..."
-        return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
-      });
+      var arr = (byCat[cat.key] || []).slice().sort(byCreated); // creation order → matches "Outfit 1,2,..."
       var multi = arr.length > 1;
       arr.forEach(function (it, i) {
         var suffix = multi ? (cat.key + '_' + (i + 1) + '_full') : (cat.key + '_full');
@@ -263,11 +294,35 @@
       return;
     }
     pageTypeEl.textContent = TYPE_LABEL[scan.pageType] || '非目标页';
-    if (!scan.ok || scan.pageType !== 'character') {
-      setStatus(scan.pageType === 'location' ? '场景页暂未支持。' : '请在角色页打开本扩展。', true);
+    if (!scan.ok || (scan.pageType !== 'character' && scan.pageType !== 'location')) {
+      setStatus('请在角色页或场景页打开本扩展。', true);
       return;
     }
     pageName = scan.pageName || 'dreem';
+
+    // Location pages: flat list of originals (full shot + angles), no tabs/variants.
+    if (scan.pageType === 'location') {
+      setStatus('正在获取场景图…', false);
+      var locRes = null;
+      try {
+        var injL = await chrome.scripting.executeScript({ target: { tabId: currentTabId }, world: 'MAIN', func: fetchOriginalsInPage });
+        locRes = injL && injL[0] && injL[0].result;
+      } catch (e) { locRes = { ok: false, error: String(e).slice(0, 140) }; }
+      buildLocationList(locRes && locRes.ok ? locRes.items : []);
+      if (!allOriginals.length) {
+        setStatus('未找到场景图' + (locRes && !locRes.ok ? ('（获取失败：' + locRes.error + '）') : '') + '。', true);
+        return;
+      }
+      setStatus('场景图 ' + allOriginals.length + ' 张' + (locRes && !locRes.ok ? ('（部分失败：' + locRes.error + '）') : ''), !!(locRes && !locRes.ok));
+      btnAssets.hidden = false;
+      tabsEl.hidden = true;
+      listEl.innerHTML = '';
+      allOriginals.forEach(function (o) { appendOriginal(o); });
+      var lhint = document.createElement('div'); lhint.className = 'hint'; lhint.textContent = '点击单张图片即可按需下载';
+      listEl.appendChild(lhint);
+      return;
+    }
+
     activeCatKey = scan.activeCategory || null;
     var scanTilesData = scan.tiles || [];
 
