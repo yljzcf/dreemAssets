@@ -39,7 +39,7 @@
         return {
           ok: true,
           items: items.filter(function (it) { return it && it.presignedUrl; }).map(function (it) {
-            return { type: it.type, sortOrder: it.sortOrder || 0, url: it.presignedUrl };
+            return { type: it.type, sortOrder: it.sortOrder || 0, createdAt: it.createdAt || '', id: it.id || '', url: it.presignedUrl };
           })
         };
       } catch (e) { return { ok: false, error: String(e).slice(0, 140) }; }
@@ -77,7 +77,11 @@
       (byCat[cat.key] = byCat[cat.key] || []).push(it);
     });
     CATS.forEach(function (cat) {
-      var arr = (byCat[cat.key] || []).slice().sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
+      var arr = (byCat[cat.key] || []).slice().sort(function (a, b) {
+        if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
+        if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1; // oldest first → matches "Outfit 1,2,..."
+        return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+      });
       var multi = arr.length > 1;
       arr.forEach(function (it, i) {
         var suffix = multi ? (cat.key + '_' + (i + 1) + '_full') : (cat.key + '_full');
@@ -135,7 +139,7 @@
     listEl.appendChild(wrap);
   }
 
-  function appendVariantRow(vs) {
+  function appendOneVariantRow(vs) {
     var row = document.createElement('div');
     row.className = 'variant-row';
     vs.forEach(function (v) {
@@ -148,6 +152,15 @@
       row.appendChild(cell);
     });
     listEl.appendChild(row);
+  }
+
+  // Split a variant group into balanced rows (max 8 per row) so large groups (e.g. 12) wrap.
+  function appendVariantRow(vs) {
+    var maxPer = 8;
+    if (vs.length <= maxPer) { appendOneVariantRow(vs); return; }
+    var nRows = Math.ceil(vs.length / maxPer);
+    var per = Math.ceil(vs.length / nRows);
+    for (var i = 0; i < vs.length; i += per) appendOneVariantRow(vs.slice(i, i + per));
   }
 
   // Others layout: 2 per row, but an odd count >= 3 puts 3 in the last row.
