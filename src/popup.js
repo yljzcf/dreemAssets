@@ -92,18 +92,21 @@
     });
   }
 
-  // Build variant descriptors for the active category from the DOM tiles.
-  function buildTiles(scanTiles) {
-    var cat = activeCatKey ? DreemPageConfig.categoryByTabKey(activeCatKey) : null;
-    var key = cat ? cat.key : (activeCatKey || 'var');
-    tiles = (scanTiles || []).map(function (t, i) {
+  // Build variant descriptors from the DOM tiles, grouped by outfit (tile grid).
+  // multiOriginal → filenames/labels carry the outfit index (e.g. Faye_outfit_1_3).
+  function buildTiles(scanTiles, categoryKey, multiOriginal) {
+    var key = categoryKey || 'var';
+    var perGroup = {};
+    tiles = (scanTiles || []).map(function (t) {
+      var v = (perGroup[t.group] = (perGroup[t.group] || 0) + 1); // 1-based within its group
+      var suffix = multiOriginal ? (key + '_' + (t.group + 1) + '_' + v) : (key + '_' + v);
       return {
-        url: t.url, kind: 'variant', categoryKey: key,
-        label: '变体 ' + (i + 1), width: t.width, height: t.height,
-        filename: fileName(key + '_' + (i + 1), t.url)
+        url: t.url, kind: 'variant', categoryKey: key, group: t.group,
+        label: multiOriginal ? ('变体 ' + (t.group + 1) + '.' + v) : ('变体 ' + v),
+        width: t.width, height: t.height,
+        filename: fileName(suffix, t.url)
       };
     });
-    return key;
   }
 
   function renderItem(img) {
@@ -155,8 +158,18 @@
     // content for selected tab
     listEl.innerHTML = '';
     var g = groups[selectedKey] || { originals: [] };
-    var items = g.originals.slice();
-    if (selectedKey === mappedActive) items = items.concat(tiles); // variants only for the page's active category
+    var origs = g.originals;
+    var items = [];
+    if (selectedKey === mappedActive) {
+      // active category: interleave each original with its variant group (主图 j → 变体 j.x)
+      origs.forEach(function (o, j) {
+        items.push(o);
+        tiles.forEach(function (t) { if (t.group === j) items.push(t); });
+      });
+      tiles.forEach(function (t) { if (t.group >= origs.length) items.push(t); });
+    } else {
+      items = origs.slice();
+    }
     if (!items.length) {
       var d = document.createElement('div'); d.className = 'status';
       d.textContent = (selectedKey === mappedActive) ? '该分类暂无图片' : '该分类暂无原图（切到此分类的网页标签可看变体）';
@@ -185,7 +198,7 @@
     }
     pageName = scan.pageName || 'dreem';
     activeCatKey = scan.activeCategory || null;
-    buildTiles(scan.tiles || []);
+    var scanTilesData = scan.tiles || [];
 
     setStatus('正在获取原图…', false);
     var originals = null;
@@ -195,6 +208,11 @@
     } catch (e) { originals = { ok: false, error: String(e).slice(0, 140) }; }
 
     buildGroups(originals && originals.ok ? originals.items : []);
+
+    // Variants belong to the page's active category; multi-original → outfit-indexed names.
+    var mappedActiveKey = activeCategoryKeyMapped();
+    var activeOriginalCount = (mappedActiveKey && groups[mappedActiveKey]) ? groups[mappedActiveKey].originals.length : 0;
+    buildTiles(scanTilesData, mappedActiveKey || activeCatKey, activeOriginalCount > 1);
 
     if (!allOriginals.length && !tiles.length) {
       setStatus('未找到任何图片' + (originals && !originals.ok ? ('（原图获取失败：' + originals.error + '）') : '') + '。', true);

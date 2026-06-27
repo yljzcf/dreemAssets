@@ -49,6 +49,20 @@ test('activeCategoryKey: reads the active tab id suffix', () => {
   assert.strictEqual(cfg.activeCategoryKey(fakeDoc), 'outfits');
 });
 
+test('scanTiles: groups tiles by their nearest grid container', () => {
+  var gridA = { className: 'flex grid gap-2', parentElement: null };
+  var gridB = { className: 'flex grid gap-2', parentElement: null };
+  function tile(grid, src) {
+    return { currentSrc: src, src: src, naturalWidth: 100, naturalHeight: 200, parentElement: { className: 'cell', parentElement: grid } };
+  }
+  var els = [tile(gridA, 'blob:a1'), tile(gridA, 'blob:a2'), tile(gridB, 'blob:b1')];
+  var fakeDoc = { querySelectorAll: function () { return els; } };
+  var out = cfg.scanTiles(fakeDoc);
+  assert.deepStrictEqual(out.map(function (t) { return t.group; }), [0, 0, 1]);
+  assert.strictEqual(out[0].url, 'blob:a1');
+  assert.strictEqual(out[0].width, 100);
+});
+
 test('getPageName: character uses the portrait alt as the name', () => {
   var fakeDoc = {
     title: 'Dreem Creator Studio',

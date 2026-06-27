@@ -61,6 +61,25 @@
     return EXTRACTORS[pageType] || [];
   }
 
+  // Collect the current category's variant crops, grouped by their tile grid.
+  // Each grid is one source/outfit; `group` (0-based, DOM order) ties variants to
+  // the matching original. Returns [{ url, group, width, height }] in DOM order.
+  function scanTiles(doc) {
+    var els = Array.prototype.slice.call(doc.querySelectorAll(TILE_SEL));
+    var grids = [];
+    function nearestGrid(t) {
+      var e = t, d = 0;
+      while (e && d < 10 && !/grid/.test(typeof e.className === 'string' ? e.className : '')) { e = e.parentElement; d++; }
+      return e || t;
+    }
+    return els.map(function (t) {
+      var g = nearestGrid(t);
+      var gi = grids.indexOf(g);
+      if (gi < 0) { gi = grids.length; grids.push(g); }
+      return { url: t.currentSrc || t.src || '', group: gi, width: t.naturalWidth || null, height: t.naturalHeight || null };
+    });
+  }
+
   function getPageName(pageType, doc) {
     try {
       if (pageType === 'character') {
@@ -81,6 +100,7 @@
     categoryByTabKey: categoryByTabKey,
     activeCategoryKey: activeCategoryKey,
     getRules: getRules,
+    scanTiles: scanTiles,
     getPageName: getPageName
   };
 }));
