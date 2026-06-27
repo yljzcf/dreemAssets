@@ -142,6 +142,31 @@
     listEl.appendChild(row);
   }
 
+  // Others layout: 2 per row, but an odd count >= 3 puts 3 in the last row.
+  function othersRowSizes(n) {
+    if (n <= 0) return [];
+    if (n % 2 === 1 && n >= 3) {
+      var rows = [];
+      for (var i = 0; i < (n - 3) / 2; i++) rows.push(2);
+      rows.push(3);
+      return rows;
+    }
+    var out = [], rem = n;
+    while (rem > 0) { out.push(Math.min(2, rem)); rem -= 2; }
+    return out;
+  }
+
+  function appendOthersGrid(origs) {
+    var sizes = othersRowSizes(origs.length);
+    var idx = 0;
+    sizes.forEach(function (size) {
+      var row = document.createElement('div');
+      row.className = 'grid-row';
+      for (var k = 0; k < size && idx < origs.length; k++) { row.appendChild(clickableImg(origs[idx++], 'grid-img')); }
+      listEl.appendChild(row);
+    });
+  }
+
   function activeCategoryKeyMapped() {
     var cat = activeCatKey ? DreemPageConfig.categoryByTabKey(activeCatKey) : null;
     return cat ? cat.key : null;
@@ -176,17 +201,27 @@
       listEl.appendChild(d);
       return;
     }
-    // each original (big, full-width), and for the active category its variants below (one row)
-    origs.forEach(function (o, j) {
-      appendOriginal(o);
+    if (selectedKey === 'others') {
+      // Others: 2/3-per-row grid of originals
+      appendOthersGrid(origs);
       if (isActive) {
-        var vs = tiles.filter(function (t) { return t.group === j; });
-        if (vs.length) appendVariantRow(vs);
+        var byGroup = {};
+        tiles.forEach(function (t) { (byGroup[t.group] = byGroup[t.group] || []).push(t); });
+        Object.keys(byGroup).forEach(function (k) { appendVariantRow(byGroup[k]); });
       }
-    });
-    if (isActive) {
-      var leftover = tiles.filter(function (t) { return t.group >= origs.length; });
-      if (leftover.length) appendVariantRow(leftover);
+    } else {
+      // each original (big, full-width), and for the active category its variants below (one row)
+      origs.forEach(function (o, j) {
+        appendOriginal(o);
+        if (isActive) {
+          var vs = tiles.filter(function (t) { return t.group === j; });
+          if (vs.length) appendVariantRow(vs);
+        }
+      });
+      if (isActive) {
+        var leftover = tiles.filter(function (t) { return t.group >= origs.length; });
+        if (leftover.length) appendVariantRow(leftover);
+      }
     }
     var hint = document.createElement('div');
     hint.className = 'hint';

@@ -10,11 +10,12 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 .btn.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
 .btn.primary:hover { background: #1d4ed8; }
 
-.tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid rgba(128,128,128,.2); overflow-x: auto; }
-.tab { flex: none; padding: 5px 10px; border: 1px solid transparent; border-radius: 999px; background: rgba(128,128,128,.12); cursor: pointer; font-size: 12px; color: inherit; }
+/* 5 tabs evenly fill the row */
+.tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid rgba(128,128,128,.2); }
+.tab { flex: 1 1 0; min-width: 0; text-align: center; padding: 5px 4px; border: 1px solid transparent; border-radius: 6px; background: rgba(128,128,128,.12); cursor: pointer; font-size: 12px; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tab:hover { background: rgba(128,128,128,.2); }
 .tab.active { background: #2563eb; color: #fff; }
-.tab .count { opacity: .7; margin-left: 4px; font-size: 11px; }
+.tab .count { opacity: .7; margin-left: 3px; font-size: 11px; }
 
 .status { padding: 8px 12px; color: #888; font-size: 12px; }
 .status.error { color: #c0392b; }
@@ -23,10 +24,14 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 
 /* original (main image): full width, click to download */
 .orig { margin: 6px 0; }
-.orig-img { display: block; width: 100%; max-height: 340px; object-fit: contain; border-radius: 6px; background: rgba(128,128,128,.1); cursor: pointer; transition: outline .1s; }
+.orig-img { display: block; width: 100%; max-height: 340px; object-fit: contain; border-radius: 6px; background: rgba(128,128,128,.1); cursor: pointer; }
 
-/* variant row: all variants in one horizontal line, with gaps, click to download */
-.variant-row { display: flex; gap: 8px; overflow-x: auto; padding: 6px 0 4px; }
-.variant-img { height: 100px; width: auto; object-fit: contain; border-radius: 4px; background: rgba(128,128,128,.1); cursor: pointer; flex: none; }
+/* variant row: variants share the full row width evenly (no right gap), click to download */
+.variant-row { display: flex; gap: 8px; padding: 6px 0 4px; }
+.variant-img { flex: 1 1 0; min-width: 0; height: 130px; object-fit: contain; border-radius: 4px; background: rgba(128,128,128,.1); cursor: pointer; }
+
+/* Others grid: 2 or 3 images per row, sharing the row width */
+.grid-row { display: flex; gap: 8px; margin: 6px 0; }
+.grid-img { flex: 1 1 0; min-width: 0; height: 160px; object-fit: contain; border-radius: 6px; background: rgba(128,128,128,.1); cursor: pointer; }
 
 .hint { font-size: 11px; color: #888; padding: 4px 2px 2px; }
