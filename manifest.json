@@ -5,9 +5,21 @@
   "description": "下载 dreem-world studio 角色页的原图（全部分类）与当前分类的变体裁剪图，支持打包或分张下载。",
   "permissions": ["scripting"],
   "host_permissions": ["https://studio.dreem-world.ai/*", "https://*.cloudfront.net/*"],
+  "icons": {
+    "16": "src/icons/icon-16.png",
+    "32": "src/icons/icon-32.png",
+    "48": "src/icons/icon-48.png",
+    "128": "src/icons/icon-128.png"
+  },
   "action": {
     "default_popup": "src/popup.html",
-    "default_title": "Dreem 图片下载"
+    "default_title": "Dreem 图片下载",
+    "default_icon": {
+      "16": "src/icons/icon-16.png",
+      "32": "src/icons/icon-32.png",
+      "48": "src/icons/icon-48.png",
+      "128": "src/icons/icon-128.png"
+    }
   },
   "content_scripts": [
     {
