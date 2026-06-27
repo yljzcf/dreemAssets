@@ -90,9 +90,10 @@
       var key = DreemPageConfig.locationKey(type);
       var label = DreemPageConfig.locationLabel(type);
       var multi = arr.length > 1;
+      var bucket = (type === 'location_fullshot') ? 'full' : 'grid'; // full shot full-width; angles in a 2/3 grid
       arr.forEach(function (it, i) {
         allOriginals.push({
-          url: it.url, kind: 'original',
+          url: it.url, kind: 'original', bucket: bucket,
           label: multi ? (label + ' ' + (i + 1)) : label,
           filename: fileName(multi ? (key + '_' + (i + 1)) : key, it.url)
         });
@@ -317,7 +318,9 @@
       btnAssets.hidden = false;
       tabsEl.hidden = true;
       listEl.innerHTML = '';
-      allOriginals.forEach(function (o) { appendOriginal(o); });
+      allOriginals.filter(function (o) { return o.bucket === 'full'; }).forEach(appendOriginal);
+      var locGrid = allOriginals.filter(function (o) { return o.bucket !== 'full'; });
+      if (locGrid.length) appendOthersGrid(locGrid);
       var lhint = document.createElement('div'); lhint.className = 'hint'; lhint.textContent = '点击单张图片即可按需下载';
       listEl.appendChild(lhint);
       return;
