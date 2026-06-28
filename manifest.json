@@ -4,7 +4,7 @@
   "version": "0.7.0",
   "description": "下载 dreem-world studio 角色页的原图（全部分类）与当前分类的变体裁剪图，支持打包或分张下载。",
   "permissions": ["scripting"],
-  "host_permissions": ["https://studio.dreem-world.ai/*", "https://*.cloudfront.net/*"],
+  "host_permissions": ["https://studio.dreem-world.ai/*", "https://*.cloudfront.net/*", "https://raw.githubusercontent.com/*"],
   "icons": {
     "16": "src/icons/icon-16.png",
     "32": "src/icons/icon-32.png",
