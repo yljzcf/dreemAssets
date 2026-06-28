@@ -342,7 +342,7 @@
 
     var scan = await sendToContent({ type: 'scan' });
     if (!scan) {
-      setStatus('请在 dreem-world 的角色页打开本扩展（若刚装好扩展，请先刷新页面）。', true);
+      setStatus('请在 dreem-world 打开本扩展', true);
       return;
     }
     if (!scan.ok || (scan.pageType !== 'character' && scan.pageType !== 'location')) {

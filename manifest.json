@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Dreem 图片下载",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "下载 dreem-world studio 角色页/场景页的原图与变体裁剪图，并可将页面文字设定（Identity/Personality 等）导出为 Markdown，支持打包或分张下载。",
   "permissions": ["scripting"],
   "host_permissions": ["https://studio.dreem-world.ai/*", "https://*.cloudfront.net/*", "https://raw.githubusercontent.com/*"],
