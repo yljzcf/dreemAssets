@@ -8,6 +8,7 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 /* left zone: GitHub update status (icon + emoji + text) */
 .update-status { justify-self: start; display: flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; color: #888; }
 .gh-link { display: inline-flex; cursor: pointer; color: inherit; }
+.gh-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 3px; }
 .gh-icon { width: 16px; height: 16px; fill: currentColor; display: block; }
 .update-emoji { line-height: 1; }
 .update-text { color: #888; }
