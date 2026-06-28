@@ -7,6 +7,11 @@
   var statusEl = document.getElementById('status');
   var listEl = document.getElementById('list');
 
+  var updateStatusEl = document.getElementById('updateStatus');
+  var updateEmojiEl = document.getElementById('updateEmoji');
+  var updateTextEl = document.getElementById('updateText');
+  var ghLinkEl = document.getElementById('ghLink');
+
   var CATS = DreemPageConfig.CATEGORIES;
   var TYPE_LABEL = { character: '角色页', location: '场景页', unknown: '非目标页' };
 
@@ -53,6 +58,15 @@
     statusEl.textContent = text || '';
     statusEl.className = 'status' + (isError ? ' error' : '');
     statusEl.hidden = !text;
+  }
+
+  function renderUpdate(info) {
+    var d = DreemUpdateCheck.describe(info);
+    updateEmojiEl.textContent = d.emoji;
+    updateTextEl.textContent = d.text;
+    if (d.title) updateStatusEl.setAttribute('title', d.title);
+    else updateStatusEl.removeAttribute('title');
+    updateStatusEl.classList.toggle('has-update', d.blink);
   }
 
   function sendToContent(message) {
@@ -301,6 +315,9 @@
   }
 
   async function init() {
+    renderUpdate(DreemUpdateCheck.getCached());
+    DreemUpdateCheck.check().then(renderUpdate);
+
     var tabs = await new Promise(function (r) { chrome.tabs.query({ active: true, currentWindow: true }, r); });
     var tab = tabs && tabs[0];
     if (!tab) { setStatus('无法获取当前标签页', true); return; }
@@ -388,6 +405,12 @@
       btnAssets.disabled = false;
       setTimeout(function () { btnAssets.textContent = orig; }, 2500);
     });
+  });
+
+  function openRepo() { chrome.tabs.create({ url: DreemUpdateCheck.repoUrl() }); }
+  ghLinkEl.addEventListener('click', openRepo);
+  ghLinkEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRepo(); }
   });
 
   init();
