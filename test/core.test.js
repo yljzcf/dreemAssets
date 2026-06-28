@@ -65,6 +65,22 @@ test('extFromUrl: defaults to png', () => {
   assert.strictEqual(core.extFromUrl('garbage'), 'png');
 });
 
+test('urlPath: ignores query so the same file behind different signed URLs matches', () => {
+  var a = core.urlPath('https://d1.cloudfront.net/assets/uuid-abc.png?Expires=1&Signature=x');
+  var b = core.urlPath('https://d1.cloudfront.net/assets/uuid-abc.png?Expires=2&Signature=y');
+  assert.strictEqual(a, b);
+  assert.strictEqual(a, '/assets/uuid-abc.png');
+});
+
+test('urlPath: different files yield different paths', () => {
+  assert.notStrictEqual(core.urlPath('https://x/y/a.png?s=1'), core.urlPath('https://x/y/b.png?s=1'));
+});
+
+test('urlPath: garbage yields empty string', () => {
+  assert.strictEqual(core.urlPath(''), '');
+  assert.strictEqual(core.urlPath(null), '');
+});
+
 test('buildFilename: combines pageName + label + ext', () => {
   assert.strictEqual(
     core.buildFilename({ pageName: '小明', label: '立绘', index: 0, ext: 'png' }),
@@ -213,4 +229,41 @@ test('compareVersions: null/garbage treated as 0', () => {
   assert.strictEqual(core.compareVersions(null, '0.0.0'), 0);
   assert.strictEqual(core.compareVersions('1.0.0', null), 1);
   assert.strictEqual(core.compareVersions('x.y', '0.0'), 0);
+});
+
+test('buildInfoMarkdown: renders name, tagline, field sections and free-text sections', () => {
+  var md = core.buildInfoMarkdown({
+    name: 'Janet Belle',
+    tagline: 'The architect of every arrangement.',
+    sections: [
+      { title: 'Identity', fields: [ { term: 'Age', value: '26' }, { term: 'Gender', value: 'Female' } ] },
+      { title: 'Others', text: 'Some free notes.' }
+    ]
+  });
+  assert.strictEqual(md,
+    '# Janet Belle\n\n' +
+    '> The architect of every arrangement.\n\n' +
+    '## Identity\n\n' +
+    '- **Age:** 26\n' +
+    '- **Gender:** Female\n\n' +
+    '## Others\n\n' +
+    'Some free notes.\n'
+  );
+});
+
+test('buildInfoMarkdown: omits tagline blockquote when absent', () => {
+  var md = core.buildInfoMarkdown({ name: 'Art Academy', sections: [ { title: 'Identity', fields: [ { term: 'Type', value: 'academic institution' } ] } ] });
+  assert.ok(md.indexOf('\n>') === -1, 'no blockquote line');
+  assert.ok(md.indexOf('# Art Academy\n\n## Identity') === 0, 'name directly followed by first section');
+});
+
+test('buildInfoMarkdown: empty/missing info falls back to a dreem heading', () => {
+  assert.strictEqual(core.buildInfoMarkdown({}), '# dreem\n');
+  assert.strictEqual(core.buildInfoMarkdown(), '# dreem\n');
+});
+
+test('buildInfoMarkdown: ends with exactly one trailing newline', () => {
+  var md = core.buildInfoMarkdown({ name: 'X', sections: [ { title: 'A', fields: [ { term: 't', value: 'v' } ] } ] });
+  assert.ok(/[^\n]\n$/.test(md), 'single trailing newline');
+  assert.ok(!/\n\n$/.test(md), 'not a blank line at the end');
 });

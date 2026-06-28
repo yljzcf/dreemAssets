@@ -71,3 +71,98 @@ test('getPageName: character uses the portrait alt as the name', () => {
   };
   assert.strictEqual(cfg.getPageName('character', fakeDoc), 'Leon');
 });
+
+// --- scanInfoPanel: fake-DOM builders mirroring the live info panel ---
+function el(tag, text, props) {
+  return Object.assign({ tagName: tag, textContent: text == null ? '' : text, nextElementSibling: null }, props || {});
+}
+function dtNode(term, value) {
+  return el('DT', term, { nextElementSibling: el('DD', value) });
+}
+function dlNode(dts) {
+  return { querySelectorAll: function (sel) { return sel === 'dt' ? dts : []; } };
+}
+function sectionNode(h3text, opts) {
+  opts = opts || {};
+  var h3 = h3text == null ? null : el('H3', h3text);
+  return { querySelector: function (sel) {
+    if (sel === 'h3') return h3;
+    if (sel === 'dl') return opts.dl || null;
+    if (sel === 'p') return opts.p != null ? el('P', opts.p) : null;
+    if (sel === 'section') return opts.nested || null;
+    return null;
+  } };
+}
+function infoDoc(h2node, sections, taglineEl) {
+  return {
+    querySelector: function (sel) {
+      if (sel === 'h2') return h2node || null;
+      if (sel.indexOf('tagline') > -1) return taglineEl || null;
+      return null;
+    },
+    querySelectorAll: function (sel) { return sel === 'section' ? sections : []; }
+  };
+}
+
+test('scanInfoPanel: extracts dl field sections and pairs dt/dd', () => {
+  var doc = infoDoc(el('H2', 'Janet Belle'), [
+    sectionNode('Identity', { dl: dlNode([ dtNode('Age', '26'), dtNode('Gender', 'Female') ]) })
+  ]);
+  var info = cfg.scanInfoPanel(doc);
+  assert.strictEqual(info.name, 'Janet Belle');
+  assert.deepStrictEqual(info.sections, [
+    { title: 'Identity', fields: [ { term: 'Age', value: '26' }, { term: 'Gender', value: 'Female' } ] }
+  ]);
+});
+
+test('scanInfoPanel: skips empty (—) values and sections left with no fields', () => {
+  var doc = infoDoc(el('H2', 'X'), [
+    sectionNode('Identity', { dl: dlNode([ dtNode('Age', '26'), dtNode('Form', '—') ]) }),
+    sectionNode('Empty', { dl: dlNode([ dtNode('Body Mark', '—') ]) })
+  ]);
+  var info = cfg.scanInfoPanel(doc);
+  assert.deepStrictEqual(info.sections, [
+    { title: 'Identity', fields: [ { term: 'Age', value: '26' } ] }
+  ]);
+});
+
+test('scanInfoPanel: captures free-text sections but skips the Others placeholder', () => {
+  var doc = infoDoc(el('H2', 'X'), [
+    sectionNode('Others', { p: 'Add free-form notes the AI should reference when generating.' }),
+    sectionNode('Notes', { p: 'Real note here.' })
+  ]);
+  var info = cfg.scanInfoPanel(doc);
+  assert.deepStrictEqual(info.sections, [ { title: 'Notes', text: 'Real note here.' } ]);
+});
+
+test('scanInfoPanel: ignores sections without an h3 title (e.g. portrait)', () => {
+  var doc = infoDoc(el('H2', 'X'), [
+    sectionNode(null, { dl: dlNode([ dtNode('Age', '26') ]) }),
+    sectionNode('Identity', { dl: dlNode([ dtNode('Gender', 'Female') ]) })
+  ]);
+  var info = cfg.scanInfoPanel(doc);
+  assert.deepStrictEqual(info.sections, [ { title: 'Identity', fields: [ { term: 'Gender', value: 'Female' } ] } ]);
+});
+
+test('scanInfoPanel: reads the tagline element (class*="tagline")', () => {
+  var doc = infoDoc(el('H2', 'Janet Belle'), [], el('DIV', 'The architect of every arrangement.'));
+  assert.strictEqual(cfg.scanInfoPanel(doc).tagline, 'The architect of every arrangement.');
+});
+
+test('scanInfoPanel: no tagline element yields empty tagline; no h2 yields empty name', () => {
+  assert.strictEqual(cfg.scanInfoPanel(infoDoc(el('H2', 'Art Academy'), [])).tagline, '');
+  var info = cfg.scanInfoPanel(infoDoc(null, []));
+  assert.strictEqual(info.name, '');
+  assert.deepStrictEqual(info.sections, []);
+});
+
+test('scanInfoPanel: ignores the wrapper section that nests the group sections', () => {
+  // The live panel wraps all groups in an outer <section>; querySelector on it resolves
+  // to the FIRST h3/dl, which would phantom-duplicate the first group if not excluded.
+  var idDl = dlNode([ dtNode('Age', '26') ]);
+  var inner = sectionNode('Identity', { dl: idDl });
+  var wrapper = sectionNode('Identity', { dl: idDl, nested: inner });
+  var doc = infoDoc(el('H2', 'X'), [ wrapper, inner, sectionNode('Setting', { dl: dlNode([ dtNode('Era', 'future') ]) }) ]);
+  var info = cfg.scanInfoPanel(doc);
+  assert.deepStrictEqual(info.sections.map(function (s) { return s.title; }), ['Identity', 'Setting']);
+});

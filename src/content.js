@@ -11,7 +11,8 @@
     var pageName = DreemPageConfig.getPageName(type, document);
     var tiles = DreemPageConfig.scanTiles(document);
     var activeCategory = DreemPageConfig.activeCategoryKey(document);
-    return { ok: true, pageType: type, pageName: pageName, activeCategory: activeCategory, tiles: tiles };
+    var info = DreemPageConfig.scanInfoPanel(document); // left text panel (Identity/Personality/…)
+    return { ok: true, pageType: type, pageName: pageName, activeCategory: activeCategory, tiles: tiles, info: info };
   }
 
   // --- downloading happens in the page context so blob: and signed URLs resolve ---
@@ -48,13 +49,14 @@
     return next();
   }
 
-  // Fetch all images, bundle into one ZIP, and save it.
-  function downloadZip(images, zipName) {
+  // Fetch all images, bundle into one ZIP (plus any text files, e.g. an info .md), and save it.
+  function downloadZip(images, zipName, texts) {
     var zip = new JSZip();
     var failures = [];
     var i = 0;
     function next() {
       if (i >= images.length) {
+        (texts || []).forEach(function (t) { try { zip.file(t.filename, t.content); } catch (e) {} });
         return zip.generateAsync({ type: 'blob' }).then(function (blob) {
           saveBlob(blob, DreemCore.sanitizeFilename(zipName || 'dreem-images') + '.zip');
           return { ok: true, failures: failures };
@@ -80,8 +82,15 @@
       return true; // async
     }
     if (msg.type === 'zip') {
-      downloadZip(msg.images || [], msg.zipName).then(sendResponse);
+      downloadZip(msg.images || [], msg.zipName, msg.texts || []).then(sendResponse);
       return true; // async
+    }
+    if (msg.type === 'saveText') {
+      try {
+        saveBlob(new Blob([msg.content || ''], { type: 'text/markdown;charset=utf-8' }), DreemCore.sanitizeFilename(msg.filename || 'info.md'));
+        sendResponse({ ok: true });
+      } catch (e) { sendResponse({ ok: false, error: String(e) }); }
+      return false; // synchronous
     }
     return false;
   });

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var pageTypeEl = document.getElementById('pageType');
+  var btnInfo = document.getElementById('btnInfo');
   var btnAssets = document.getElementById('btnAssets');
   var tabsEl = document.getElementById('tabs');
   var statusEl = document.getElementById('status');
@@ -13,7 +13,6 @@
   var ghLinkEl = document.getElementById('ghLink');
 
   var CATS = DreemPageConfig.CATEGORIES;
-  var TYPE_LABEL = { character: '角色页', location: '场景页', unknown: '非目标页' };
 
   var currentTabId = null;
   var pageName = 'dreem';
@@ -22,6 +21,7 @@
   var tiles = [];                // current category's variant descriptors
   var allOriginals = [];         // flat list for the ZIP
   var selectedKey = null;        // selected popup tab (category key)
+  var pageInfo = null;           // scanned text panel { name, tagline, sections } (character/location)
 
   // Injected into the PAGE main world: Clerk token + artifacts API → all originals.
   function fetchOriginalsInPage() {
@@ -82,11 +82,28 @@
     return DreemCore.buildFilename({ pageName: pageName, label: suffix, index: 0, ext: DreemCore.extFromUrl(url || '') });
   }
 
+  // The scanned text panel, ready for export as "{pageName}_info.md".
+  function infoHasContent() { return !!(pageInfo && pageInfo.sections && pageInfo.sections.length); }
+  function infoFilename() { return DreemCore.buildFilename({ pageName: pageName, label: 'info', ext: 'md' }); }
+
   // Creation order: sortOrder, then createdAt, then id (ascending).
   function byCreated(a, b) {
     if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
     if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
     return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+  }
+
+  // Collapse originals that resolve to the same underlying file (same path, different signed
+  // query): dreem can return duplicate artifact records pointing to one image (e.g. a
+  // regenerated face turnaround), which would otherwise show as identical 主图 1 / 主图 2.
+  function dedupeByFile(items) {
+    var seen = {}, out = [];
+    (items || []).forEach(function (it) {
+      var key = DreemCore.urlPath(it.url);
+      if (key) { if (seen[key]) return; seen[key] = true; }
+      out.push(it);
+    });
+    return out;
   }
 
   // Location pages are flat: group originals by type (fullshot, angles, …), number duplicates.
@@ -100,7 +117,7 @@
     });
     allOriginals = [];
     types.forEach(function (type) {
-      var arr = byType[type].slice().sort(byCreated);
+      var arr = dedupeByFile(byType[type].slice().sort(byCreated));
       var key = DreemPageConfig.locationKey(type);
       var label = DreemPageConfig.locationLabel(type);
       var multi = arr.length > 1;
@@ -127,7 +144,7 @@
       (byCat[cat.key] = byCat[cat.key] || []).push(it);
     });
     CATS.forEach(function (cat) {
-      var arr = (byCat[cat.key] || []).slice().sort(byCreated); // creation order → matches "Outfit 1,2,..."
+      var arr = dedupeByFile((byCat[cat.key] || []).slice().sort(byCreated)); // creation order → matches "Outfit 1,2,..."
       var multi = arr.length > 1;
       arr.forEach(function (it, i) {
         var suffix = multi ? (cat.key + '_' + (i + 1) + '_full') : (cat.key + '_full');
@@ -325,16 +342,18 @@
 
     var scan = await sendToContent({ type: 'scan' });
     if (!scan) {
-      pageTypeEl.textContent = '非目标页';
       setStatus('请在 dreem-world 的角色页打开本扩展（若刚装好扩展，请先刷新页面）。', true);
       return;
     }
-    pageTypeEl.textContent = TYPE_LABEL[scan.pageType] || '非目标页';
     if (!scan.ok || (scan.pageType !== 'character' && scan.pageType !== 'location')) {
       setStatus('请在角色页或场景页打开本扩展。', true);
       return;
     }
     pageName = scan.pageName || 'dreem';
+    pageInfo = scan.info || null;
+    if (pageInfo) pageInfo.name = pageInfo.name || pageName;
+    // The info .md is independent of images, so reveal its button as soon as we have text.
+    btnInfo.hidden = !infoHasContent();
 
     // Location pages: flat list of originals (full shot + angles), no tabs/variants.
     if (scan.pageType === 'location') {
@@ -400,10 +419,23 @@
     btnAssets.disabled = true;
     var orig = btnAssets.textContent;
     btnAssets.textContent = '打包中…';
-    sendToContent({ type: 'zip', images: allOriginals, zipName: pageName + '_assets' }).then(function (r) {
+    var texts = infoHasContent() ? [{ filename: infoFilename(), content: DreemCore.buildInfoMarkdown(pageInfo) }] : [];
+    sendToContent({ type: 'zip', images: allOriginals, zipName: pageName + '_assets', texts: texts }).then(function (r) {
       btnAssets.textContent = (r && r.failures && r.failures.length) ? ('完成（' + r.failures.length + ' 失败）') : '已打包';
       btnAssets.disabled = false;
       setTimeout(function () { btnAssets.textContent = orig; }, 2500);
+    });
+  });
+
+  btnInfo.addEventListener('click', function () {
+    if (!infoHasContent()) return;
+    btnInfo.disabled = true;
+    var orig = btnInfo.textContent;
+    btnInfo.textContent = '生成中…';
+    sendToContent({ type: 'saveText', filename: infoFilename(), content: DreemCore.buildInfoMarkdown(pageInfo) }).then(function (r) {
+      btnInfo.textContent = (r && r.ok) ? '已保存' : '失败';
+      btnInfo.disabled = false;
+      setTimeout(function () { btnInfo.textContent = orig; }, 2000);
     });
   });
 

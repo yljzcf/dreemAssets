@@ -1,6 +1,6 @@
 {
   "name": "dreemAssets",
-  "version": "0.7.2",
+  "version": "0.8.1",
   "private": true,
   "description": "下载 dreem-world studio 角色/场景页面的指定图片的 Chrome 扩展",
   "scripts": {

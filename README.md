@@ -1,6 +1,6 @@
 # Dreem 图片下载（Chrome 扩展）
 
-![version](https://img.shields.io/badge/version-0.7.2-2563eb)
+![version](https://img.shields.io/badge/version-0.8.1-2563eb)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![manifest](https://img.shields.io/badge/Manifest-V3-2563eb)
 ![browser](https://img.shields.io/badge/Chrome%20%2F%20Edge-88%2B-lightgrey)
@@ -15,6 +15,7 @@
 - **两种下载方式**：单张点选下载，或一键 ZIP 打包。
 - **免登录配置**：复用网页已登录态调用 API，无需重新登录或手填 token。
 - **角色页 + 场景页**：场景页支持全景图 + 各角度图。
+- **设定文字导出**：把角色/场景页的文字信息面板（Identity、Personality、Background…）导出为 Markdown，可单独下载 `.md`，也会随「下载资产包」一并打进 ZIP。
 - **零构建、零追踪**：纯原生 JS，无构建步骤，无第三方统计。
 - **更新提示**：打开扩展时自动检查 GitHub 是否有新版本（节流，最多每 6 小时一次），在首行左侧以「GitHub 图标 + 状态」显示（有更新时图标闪烁），点击图标跳转仓库。
 
@@ -33,13 +34,31 @@
 在以下页面点击工具栏的扩展图标：
 
 - **角色页** `…/worlds/<id>/characters/<id>`
-  - 顶部：状态（角色页）+ **下载资产包**（把整角色所有分类的原图打包成一个 ZIP）。
+  - 顶部：状态（角色页）+ **下载设定**（把文字面板导出为 `.md`）+ **下载资产包**（把整角色所有分类的原图打包成一个 ZIP，并附带同名 `.md`）。
   - 标签行：`Face / Body / Mood / Outfit / Others`（平分宽度）。
   - 每个标签显示该分类**原图**；当弹窗标签与**网页当前所在分类**一致时，额外显示该分类的**变体裁剪图**（按「主图 → 其变体」排列）。
   - **点任意图片即可下载该张**（成功绿色描边、失败红色描边）。
 - **场景页** `…/worlds/<id>/locations/<id>`
   - 扁平列表：全景图（整幅）+ 各角度图（2~3 张一行的网格），无标签/无变体。
-  - 同样支持点图下载 + 下载资产包（ZIP）。
+  - 同样支持点图下载 + 下载设定（`.md`）+ 下载资产包（ZIP）。
+
+### 导出设定（Markdown）
+
+页面左侧的文字信息面板会被提取为 Markdown：标题为角色/场景名，角色页附一句 tagline，随后每个分组（角色页 `Identity / Personality / Background / Physical / Body / Wardrobe / Others…`，场景页 `Identity / Setting / Atmosphere / Others…`）渲染为 `## 标题` + 「**字段名:** 值」列表（自由文本组则为整段）。空字段（`—`）与空备注占位会自动跳过。
+
+- 点 **下载设定** 直接保存 `<名称>_info.md`；
+- 点 **下载资产包** 时，同一个 `.md` 会一并打进 ZIP。
+
+```markdown
+# Janet Belle
+
+> The architect of every arrangement — who built her revenge so carefully she built a life inside it.
+
+## Identity
+
+- **Age:** 26
+- **Gender:** Female
+```
 
 ### 文件名规范
 
@@ -49,7 +68,7 @@
 | 角色 · 多套穿搭（Outfit） | `<角色>_outfit_<i>_full` | `<角色>_outfit_<i>_<n>` |
 | 场景 | `<场景>_fullshot`、`<场景>_angle_<n>` | — |
 
-示例：`Faye_face_full.png`、`Faye_face_1.png`、`Faye_outfit_2_full.png`、`Faye_outfit_2_3.png`、`Forest_angle_1.png`。ZIP 命名为 `<角色或场景>_assets.zip`。文件名中的非法字符会被替换为 `_`，中文等字符保留。
+示例：`Faye_face_full.png`、`Faye_face_1.png`、`Faye_outfit_2_full.png`、`Faye_outfit_2_3.png`、`Forest_angle_1.png`。ZIP 命名为 `<角色或场景>_assets.zip`；设定文档为 `<角色或场景>_info.md`。文件名中的非法字符会被替换为 `_`，中文等字符保留。
 
 ## ⚠️ 注意事项 / 限制
 
@@ -60,6 +79,7 @@
 - **签名链接有时效**：原图为 CloudFront 预签名 URL，存在有效期；一次性打包大量图片耗时过久时，个别链接可能过期而失败。
 - **变体仅限当前分类**：变体是网页临时生成的 `blob:` 图，只对「你当前所在的分类/穿搭」可见；要拿其它分类的变体，需先在网页切到对应分类再开扩展。
 - **失败不自动重试**：单张失败会红框提示；ZIP 会跳过失败项并在按钮上显示失败数量，可重试。
+- **重复原图自动合并**：dreem 偶尔为同一张图返回多条 artifact 记录（如重复生成的 face 转身图），扩展按底层文件路径去重，只保留一张；真正不同的图不受影响。
 - **版权与服务条款**：下载内容版权归 dreem-world 及相应创作者所有。请遵守其服务条款，仅将本工具用于个人备份或你已获授权的素材，使用风险自负。
 
 ## 常见问题 / 故障排查
@@ -75,11 +95,11 @@
 
 | 文件 | 职责 |
 |---|---|
-| `src/lib/core.js` | 纯工具（UMD）：`detectPageType`、文件名 `sanitize/buildFilename/extFromUrl`、`pickFromSrcset`、`extractImages`。可在 Node 测试中 `require`。 |
-| `src/page-config.js` | 页面配置（UMD）：5 个角色分类 ↔ artifact 类型映射、当前激活标签检测、变体网格抓取 `scanTiles`、页面名、场景类型标签。 |
+| `src/lib/core.js` | 纯工具（UMD）：`detectPageType`、文件名 `sanitize/buildFilename/extFromUrl`、`pickFromSrcset`、`extractImages`、设定文字转 Markdown `buildInfoMarkdown`。可在 Node 测试中 `require`。 |
+| `src/page-config.js` | 页面配置（UMD）：5 个角色分类 ↔ artifact 类型映射、当前激活标签检测、变体网格抓取 `scanTiles`、文字面板抓取 `scanInfoPanel`、页面名、场景类型标签。 |
 | `src/update-check.js` | 更新检查（UMD）：取本地/远端 `manifest.json` 版本、6h 节流、`localStorage` 缓存；纯函数 `deriveState`/`describe`/`compareVersions` 可在 Node 测试。 |
-| `src/content.js` | 内容脚本：响应 popup 的 `scan`（返回页面类型、名称、当前分类、变体）与 `download`/`zip`（在页面内 fetch 字节 + 保存/打包，支持 `blob:` 与签名 URL）。 |
-| `src/popup.{html,css,js}` | 弹窗 UI：编排 scan + 取原图 + 渲染（角色分标签 / 场景扁平）+ 下载。 |
+| `src/content.js` | 内容脚本：响应 popup 的 `scan`（返回页面类型、名称、当前分类、变体、文字面板 `info`）与 `download`/`zip`/`saveText`（在页面内 fetch 字节 + 保存/打包，ZIP 可附带文本文件，支持 `blob:` 与签名 URL）。 |
+| `src/popup.{html,css,js}` | 弹窗 UI：编排 scan + 取原图 + 渲染（角色分标签 / 场景扁平）+ 下载；**下载设定** 按钮导出 `.md`。 |
 | `src/lib/jszip.min.js` | 第三方库（[JSZip](https://stuk.github.io/jszip/)，MIT），用于在页面内打包 ZIP。 |
 | `src/icons/icon-*.png` | 扩展图标（如需更换见[替换图标](#替换图标)）。 |
 

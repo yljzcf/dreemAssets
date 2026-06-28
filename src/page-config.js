@@ -81,6 +81,47 @@
     });
   }
 
+  function infoText(el) { return (el && el.textContent) ? String(el.textContent).trim() : ''; }
+
+  // Read the left text panel shared by character & location pages into structured data:
+  //   { name, tagline, sections: [{ title, fields:[{term,value}] } | { title, text }] }
+  // Each panel group is a <section> with an <h3> title and either a <dl> of <dt>/<dd>
+  // pairs (keyed fields) or a free-form <p> (e.g. the "Others" notes). Targets semantic
+  // tags (section/h3/dl/dt/dd/h2), not fragile Tailwind classes. Empty "—" values and
+  // the empty-state notes placeholder are dropped.
+  function scanInfoPanel(doc) {
+    try {
+      var h2 = doc.querySelector('h2');
+      var name = infoText(h2);
+      var tagline = infoText(doc.querySelector('[class*="tagline"]')); // character one-liner; absent on locations
+      var sections = [];
+      var secs = Array.prototype.slice.call(doc.querySelectorAll('section'));
+      secs.forEach(function (sec) {
+        if (sec.querySelector('section')) return; // only leaf groups; skip the wrapper that nests them
+        var h3 = sec.querySelector('h3');
+        var title = infoText(h3);
+        if (!title) return;
+        var dl = sec.querySelector('dl');
+        if (dl) {
+          var fields = [];
+          Array.prototype.slice.call(dl.querySelectorAll('dt')).forEach(function (dt) {
+            var dd = (dt.nextElementSibling && dt.nextElementSibling.tagName === 'DD') ? dt.nextElementSibling : null;
+            var term = infoText(dt), value = dd ? infoText(dd) : '';
+            if (term && value && value !== '—') fields.push({ term: term, value: value });
+          });
+          if (fields.length) sections.push({ title: title, fields: fields });
+        } else {
+          var p = sec.querySelector('p');
+          var t = infoText(p);
+          if (t && !/^Add free-form notes/i.test(t)) sections.push({ title: title, text: t });
+        }
+      });
+      return { name: name, tagline: tagline, sections: sections };
+    } catch (e) {
+      return { name: '', tagline: '', sections: [] };
+    }
+  }
+
   function getPageName(pageType, doc) {
     try {
       if (pageType === 'character') {
@@ -112,6 +153,7 @@
     activeCategoryKey: activeCategoryKey,
     getRules: getRules,
     scanTiles: scanTiles,
+    scanInfoPanel: scanInfoPanel,
     getPageName: getPageName,
     locationLabel: locationLabel,
     locationKey: locationKey

@@ -38,6 +38,14 @@
     }
   }
 
+  // The path part of a URL, ignoring host and query string. Two CloudFront presigned
+  // URLs for the same object share a pathname (only their signature/expiry query differs),
+  // so this is a stable key for de-duplicating originals that point to the same file.
+  function urlPath(url) {
+    if (!url) return '';
+    try { return new URL(url, 'https://x.invalid').pathname; } catch (e) { return ''; }
+  }
+
   function buildFilename(ctx) {
     ctx = ctx || {};
     var base = sanitizeFilename(ctx.pageName || 'dreem');
@@ -110,6 +118,29 @@
     return out;
   }
 
+  // Turn the structured page-info panel (see DreemPageConfig.scanInfoPanel) into a
+  // Markdown document: H1 name, optional tagline blockquote, then one "## Title"
+  // section per group — key/value fields as a bold-term bullet list, or a free-text
+  // paragraph. Pure (no DOM), so it is unit-tested directly.
+  function buildInfoMarkdown(info) {
+    info = info || {};
+    var lines = [];
+    var name = String(info.name == null ? '' : info.name).trim() || 'dreem';
+    lines.push('# ' + name, '');
+    if (info.tagline) lines.push('> ' + String(info.tagline).trim(), '');
+    (info.sections || []).forEach(function (sec) {
+      if (!sec || !sec.title) return;
+      lines.push('## ' + sec.title, '');
+      if (sec.fields && sec.fields.length) {
+        sec.fields.forEach(function (f) { lines.push('- **' + f.term + ':** ' + f.value); });
+      } else if (sec.text) {
+        lines.push(String(sec.text));
+      }
+      lines.push('');
+    });
+    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+
   // Compare dotted numeric versions ("0.7.0"). Missing/non-numeric segments
   // count as 0. Returns 1 if a>b, -1 if a<b, 0 if equal.
   function compareVersions(a, b) {
@@ -129,9 +160,11 @@
     detectPageType: detectPageType,
     sanitizeFilename: sanitizeFilename,
     extFromUrl: extFromUrl,
+    urlPath: urlPath,
     buildFilename: buildFilename,
     pickFromSrcset: pickFromSrcset,
     extractImages: extractImages,
+    buildInfoMarkdown: buildInfoMarkdown,
     compareVersions: compareVersions
   };
 }));
