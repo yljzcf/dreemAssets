@@ -16,6 +16,7 @@
 - **免登录配置**：复用网页已登录态调用 API，无需重新登录或手填 token。
 - **角色页 + 场景页**：场景页支持全景图 + 各角度图。
 - **零构建、零追踪**：纯原生 JS，无构建步骤，无第三方统计。
+- **更新提示**：打开扩展时自动检查 GitHub 是否有新版本（节流，最多每 6 小时一次），在首行左侧以「GitHub 图标 + 状态」显示（有更新时图标闪烁），点击图标跳转仓库。
 
 ## 安装（加载未打包扩展）
 
@@ -76,6 +77,7 @@
 |---|---|
 | `src/lib/core.js` | 纯工具（UMD）：`detectPageType`、文件名 `sanitize/buildFilename/extFromUrl`、`pickFromSrcset`、`extractImages`。可在 Node 测试中 `require`。 |
 | `src/page-config.js` | 页面配置（UMD）：5 个角色分类 ↔ artifact 类型映射、当前激活标签检测、变体网格抓取 `scanTiles`、页面名、场景类型标签。 |
+| `src/update-check.js` | 更新检查（UMD）：取本地/远端 `manifest.json` 版本、6h 节流、`localStorage` 缓存；纯函数 `deriveState`/`describe`/`compareVersions` 可在 Node 测试。 |
 | `src/content.js` | 内容脚本：响应 popup 的 `scan`（返回页面类型、名称、当前分类、变体）与 `download`/`zip`（在页面内 fetch 字节 + 保存/打包，支持 `blob:` 与签名 URL）。 |
 | `src/popup.{html,css,js}` | 弹窗 UI：编排 scan + 取原图 + 渲染（角色分标签 / 场景扁平）+ 下载。 |
 | `src/lib/jszip.min.js` | 第三方库（[JSZip](https://stuk.github.io/jszip/)，MIT），用于在页面内打包 ZIP。 |
@@ -87,7 +89,7 @@
 
 **下载**：内容脚本在页面内 `fetch` 字节后用 `<a download>` 保存（`blob:` 与签名 CloudFront URL 均可）；ZIP 用页面内 JSZip 打包。**无需 `downloads` 权限**。
 
-**权限**：`scripting`（取 token）；`host_permissions`：`studio.dreem-world.ai`、`*.cloudfront.net`。
+**权限**：`scripting`（取 token）；`host_permissions`：`studio.dreem-world.ai`、`*.cloudfront.net`、`raw.githubusercontent.com`（读取远端 `manifest.json` 版本以检查更新）。
 
 ## 测试
 
