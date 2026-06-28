@@ -110,12 +110,28 @@
     return out;
   }
 
+  // Compare dotted numeric versions ("0.7.0"). Missing/non-numeric segments
+  // count as 0. Returns 1 if a>b, -1 if a<b, 0 if equal.
+  function compareVersions(a, b) {
+    var pa = String(a == null ? '' : a).split('.');
+    var pb = String(b == null ? '' : b).split('.');
+    var n = Math.max(pa.length, pb.length);
+    for (var i = 0; i < n; i++) {
+      var na = parseInt(pa[i], 10) || 0;
+      var nb = parseInt(pb[i], 10) || 0;
+      if (na > nb) return 1;
+      if (na < nb) return -1;
+    }
+    return 0;
+  }
+
   return {
     detectPageType: detectPageType,
     sanitizeFilename: sanitizeFilename,
     extFromUrl: extFromUrl,
     buildFilename: buildFilename,
     pickFromSrcset: pickFromSrcset,
-    extractImages: extractImages
+    extractImages: extractImages,
+    compareVersions: compareVersions
   };
 }));

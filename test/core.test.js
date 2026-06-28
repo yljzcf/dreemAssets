@@ -189,3 +189,28 @@ test('extractImages: getUrl returning empty string skips the element', () => {
   var rules = [{ key: 'a', label: 'A', selector: 'img.a', getUrl: function (el) { return el.src; } }];
   assert.deepStrictEqual(core.extractImages(doc, rules, { pageName: 'x' }), []);
 });
+
+test('compareVersions: equal versions', () => {
+  assert.strictEqual(core.compareVersions('0.7.0', '0.7.0'), 0);
+});
+
+test('compareVersions: patch difference', () => {
+  assert.strictEqual(core.compareVersions('0.7.1', '0.7.0'), 1);
+  assert.strictEqual(core.compareVersions('0.7.0', '0.7.1'), -1);
+});
+
+test('compareVersions: minor and major difference', () => {
+  assert.strictEqual(core.compareVersions('0.8.0', '0.7.9'), 1);
+  assert.strictEqual(core.compareVersions('1.0.0', '0.9.9'), 1);
+});
+
+test('compareVersions: different segment counts', () => {
+  assert.strictEqual(core.compareVersions('0.7', '0.7.0'), 0);
+  assert.strictEqual(core.compareVersions('0.7.1', '0.7'), 1);
+});
+
+test('compareVersions: null/garbage treated as 0', () => {
+  assert.strictEqual(core.compareVersions(null, '0.0.0'), 0);
+  assert.strictEqual(core.compareVersions('1.0.0', null), 1);
+  assert.strictEqual(core.compareVersions('x.y', '0.0'), 0);
+});
