@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Dreem 图片下载",
-  "version": "0.8.2",
-  "description": "下载 dreem-world studio 角色页/场景页的原图与变体裁剪图，并可将页面文字设定（Identity/Personality 等）导出为 Markdown，支持打包或分张下载。",
+  "name": "Dreem 助手",
+  "version": "0.9.0",
+  "description": "下载 dreem-world studio 角色页/场景页的原图与变体裁剪图、导出文字设定为 Markdown，并按时间/模型/分辨率统计积分消耗与视频时长。",
   "permissions": ["scripting"],
   "host_permissions": ["https://studio.dreem-world.ai/*", "https://*.cloudfront.net/*", "https://raw.githubusercontent.com/*"],
   "icons": {
@@ -13,7 +13,7 @@
   },
   "action": {
     "default_popup": "src/popup.html",
-    "default_title": "Dreem 图片下载",
+    "default_title": "Dreem 助手",
     "default_icon": {
       "16": "src/icons/icon-16.png",
       "32": "src/icons/icon-32.png",

@@ -21,6 +21,7 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 .btn:disabled { opacity: .6; cursor: default; }
 .btn.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
 .btn.primary:hover { background: #1d4ed8; }
+.btn.small { padding: 4px 8px; font-size: 12px; }
 
 /* 5 tabs evenly fill the row */
 .tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid rgba(128,128,128,.2); }
@@ -47,3 +48,45 @@ body { width: 400px; margin: 0; font: 13px/1.4 system-ui, "Microsoft YaHei", san
 .variant-img, .grid-img { display: block; width: auto; height: 130px; border-radius: 4px; cursor: pointer; }
 
 .hint { font-size: 11px; color: #888; padding: 4px 2px 2px; }
+
+/* ---- spending stats view (toggled by body.view-spending) ---- */
+.sp { display: none; padding: 8px 12px 12px; }
+body.view-spending .sp { display: block; }
+body.view-spending #assetsView, body.view-spending #btnInfo, body.view-spending #btnAssets { display: none; }
+
+.sp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { padding: 3px 9px; border: 1px solid transparent; border-radius: 999px; background: rgba(128,128,128,.12); cursor: pointer; font-size: 12px; color: inherit; white-space: nowrap; }
+.chip:hover { background: rgba(128,128,128,.2); }
+.chip.active { background: #2563eb; color: #fff; }
+.chip .count { opacity: .7; margin-left: 4px; font-size: 11px; }
+.sp-dates { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; color: #888; }
+.sp-dates input { flex: 1 1 0; min-width: 0; padding: 3px 6px; border: 1px solid rgba(128,128,128,.4); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+.sp-label { margin: 10px 0 4px; font-size: 11px; color: #888; }
+
+.sp-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 4px; }
+.kpi { padding: 8px 9px; border-radius: 6px; background: rgba(128,128,128,.1); min-width: 0; }
+.kpi-label { font-size: 11px; color: #888; }
+.kpi-val { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-note { font-size: 11px; color: #888; }
+
+.sp-chart { margin: 12px 0 6px; }
+.sp-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sp-chart text { fill: #888; font-size: 10px; }
+.sp-chart .axis { stroke: rgba(128,128,128,.35); }
+.sp-chart .hit { fill: transparent; }
+.sp-chart .bar { fill: #2563eb; }
+.sp-chart g:hover .bar { fill: #1d4ed8; }
+.sp-chart g:hover .hit { fill: rgba(128,128,128,.1); }
+.sp-empty { padding: 18px 0; text-align: center; color: #888; font-size: 12px; }
+
+.sp-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sp-table th { font-weight: normal; color: #888; font-size: 11px; text-align: right; padding: 4px 3px; border-bottom: 1px solid rgba(128,128,128,.3); white-space: nowrap; }
+.sp-table td { text-align: right; padding: 6px 3px; border-bottom: 1px solid rgba(128,128,128,.15); vertical-align: top; white-space: nowrap; }
+.sp-table th:first-child, .sp-table td:first-child { text-align: left; white-space: normal; word-break: break-all; }
+.sp-bar { height: 3px; margin-top: 4px; border-radius: 2px; background: rgba(128,128,128,.15); }
+.sp-bar i { display: block; height: 100%; border-radius: 2px; background: #2563eb; }
+.sp-pct { font-size: 10px; color: #888; }
+
+.sp-foot { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+.sp-status { flex: 1; min-width: 0; font-size: 11px; color: #888; }
+.sp-status.error { color: #c0392b; }

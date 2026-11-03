@@ -16,19 +16,61 @@
       <span id="updateText" class="update-text"></span>
     </div>
     <div class="hdr-actions">
+      <button id="btnSpending" class="btn" hidden>积分</button>
       <button id="btnInfo" class="btn" hidden>下载设定</button>
       <button id="btnAssets" class="btn primary" hidden>下载资产包</button>
     </div>
   </header>
 
-  <nav id="tabs" class="tabs" hidden></nav>
+  <main id="assetsView">
+    <nav id="tabs" class="tabs" hidden></nav>
 
-  <div id="status" class="status">正在扫描页面…</div>
-  <div id="list" class="list"></div>
+    <div id="status" class="status">正在扫描页面…</div>
+    <div id="list" class="list"></div>
+  </main>
+
+  <section id="spending" class="sp">
+    <div class="sp-filters">
+      <div id="spPresets" class="sp-chips">
+        <button class="chip" data-preset="today">今天</button>
+        <button class="chip" data-preset="7d">7天</button>
+        <button class="chip" data-preset="30d">30天</button>
+        <button class="chip" data-preset="month">本月</button>
+        <button class="chip" data-preset="all">全部</button>
+      </div>
+      <div class="sp-dates">
+        <input type="date" id="spFrom" aria-label="开始日期">
+        <span>至</span>
+        <input type="date" id="spTo" aria-label="结束日期">
+      </div>
+      <div class="sp-label">模型</div>
+      <div id="spModels" class="sp-chips"></div>
+      <div class="sp-label">分辨率</div>
+      <div id="spRes" class="sp-chips"></div>
+    </div>
+
+    <div class="sp-kpis">
+      <div class="kpi"><div class="kpi-label">消耗积分</div><div id="spCoins" class="kpi-val">–</div></div>
+      <div class="kpi"><div class="kpi-label">生成次数</div><div id="spCount" class="kpi-val">–</div></div>
+      <div class="kpi"><div class="kpi-label">视频总时长</div><div id="spSecs" class="kpi-val">–</div></div>
+    </div>
+    <div id="spNote" class="sp-note"></div>
+
+    <div id="spChart" class="sp-chart"></div>
+    <table id="spTable" class="sp-table"></table>
+
+    <div class="sp-foot">
+      <span id="spStatus" class="sp-status"></span>
+      <button id="spReload" class="btn small">重新全部拉取</button>
+      <button id="spCsv" class="btn small primary">导出 CSV</button>
+    </div>
+  </section>
 
   <script src="lib/core.js"></script>
   <script src="update-check.js"></script>
   <script src="page-config.js"></script>
+  <script src="lib/stats.js"></script>
+  <script src="spending.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

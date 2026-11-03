@@ -1,11 +1,11 @@
-# Dreem 图片下载（Chrome 扩展）
+# Dreem 助手（Chrome 扩展）
 
-![version](https://img.shields.io/badge/version-0.8.2-2563eb)
+![version](https://img.shields.io/badge/version-0.9.0-2563eb)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![manifest](https://img.shields.io/badge/Manifest-V3-2563eb)
 ![browser](https://img.shields.io/badge/Chrome%20%2F%20Edge-88%2B-lightgrey)
 
-一键下载 [dreem-world studio](https://studio.dreem-world.ai) **角色页**与**场景页**的资产图片——既包括各分类的**原图**（经官方 API 取签名链接），也包括当前分类的**变体裁剪图**（网页客户端临时生成、平时难以另存）。支持单张点选下载或一键打包成 ZIP，文件名自动标准化，便于素材归档。
+一键下载 [dreem-world studio](https://studio.dreem-world.ai) **角色页**与**场景页**的资产图片——既包括各分类的**原图**（经官方 API 取签名链接），也包括当前分类的**变体裁剪图**（网页客户端临时生成、平时难以另存）。支持单张点选下载或一键打包成 ZIP，文件名自动标准化，便于素材归档。另外可以**统计积分消耗**：按时间范围、模型、分辨率筛选，查看消耗积分、生成次数和视频总时长，并导出明细 CSV。
 
 ## ✨ 功能亮点
 
@@ -17,6 +17,7 @@
 - **角色页 + 场景页**：场景页支持全景图 + 各角度图。
 - **设定文字导出**：把角色/场景页的文字信息面板（Identity、Personality、Background…）导出为 Markdown，可单独下载 `.md`，也会随「下载资产包」一并打进 ZIP。
 - **零构建、零追踪**：纯原生 JS，无构建步骤，无第三方统计。
+- **积分消耗统计**：按时间（今天 / 7天 / 30天 / 本月 / 全部 / 自定义起止日期）、模型、分辨率筛选，汇总消耗积分、生成次数、视频总时长，附趋势柱状图、「模型 × 分辨率」明细表，可导出 CSV。
 - **更新提示**：打开扩展时自动检查 GitHub 是否有新版本（节流，最多每 6 小时一次），在首行左侧以「GitHub 图标 + 状态」显示（有更新时图标闪烁），点击图标跳转仓库。
 
 ## 安装（加载未打包扩展）
@@ -33,6 +34,8 @@
 
 在以下页面点击工具栏的扩展图标：
 
+- **其他 dreem 页面**（如 `…/insights?tab=spending`、首页）→ 直接打开**积分统计**（见下文）。
+
 - **角色页** `…/worlds/<id>/characters/<id>`
   - 顶部：状态（角色页）+ **下载设定**（把文字面板导出为 `.md`）+ **下载资产包**（把整角色所有分类的原图打包成一个 ZIP，并附带同名 `.md`）。
   - 标签行：`Face / Body / Mood / Outfit / Others`（平分宽度）。
@@ -41,6 +44,15 @@
 - **场景页** `…/worlds/<id>/locations/<id>`
   - 扁平列表：全景图（整幅）+ 各角度图（2~3 张一行的网格），无标签/无变体。
   - 同样支持点图下载 + 下载设定（`.md`）+ 下载资产包（ZIP）。
+- 在角色页/场景页，顶部的 **积分** 按钮可切换到积分统计，**返回** 回到图片列表。
+
+### 积分统计
+
+- **筛选**：时间快捷按钮（今天 / 7天 / 30天 / 本月 / 全部）或自定义起止日期；**模型**、**分辨率**均可多选（「全部」= 不限），分辨率选项随所选模型联动。筛选条件会记住，下次打开沿用。
+- **结果**：消耗积分、生成次数、视频总时长（时:分:秒）；趋势柱状图（超过 60 天自动按月，悬停看当天/当月积分、次数、时长）；「模型 × 分辨率」明细（次数、时长、积分、占比）。
+- **导出 CSV**：导出当前筛选结果（时间、类型、模型、分辨率/尺寸、时长、时长来源、积分、worldId、id），带 BOM，Excel 直接打开中文不乱码。
+- **时长估算**：dreem 在 **2026-08-08 之前**的扣费记录没有时长字段。扩展用同模型、同分辨率新记录的「每秒 token 数」，由旧记录的 token 数反推时长（带参考视频的记录单独校准）。用真实数据回测，99% 的记录误差为 0，总时长偏差约 0.1%。明细表中含估算的时长前面标 `≈`，CSV 的「时长来源」列标「估算」。
+- **缓存**：首次打开会逐页拉取全部扣费记录（约 2000 条需 20 秒左右，中途关闭弹窗也没关系，下次接着拉）；之后每次打开只拉新增的记录，基本秒开。数据缓存在扩展自己的 `localStorage`，按账号分开存；数据异常时点 **重新全部拉取**。
 
 ### 导出设定（Markdown）
 
@@ -88,6 +100,8 @@
 - **显示「未找到任何图片（原图获取失败：…）」** → 多为未登录或登录态失效（如 `clerk-unavailable`、`no-token`、`http-401`）；在网页正常登录并刷新后重试。
 - **某分类只有原图、没有变体** → 变体只在「网页当前所在分类」显示；先在网页点到该分类标签，再打开扩展。
 - **个别图下载失败（红框 / ZIP 提示失败）** → 多为签名链接过期或网络波动，重试即可。
+- **积分统计显示「获取失败（http-401 / clerk-unavailable…）」** → 未登录或登录过期；在网页重新登录、刷新后再打开。已缓存的数据仍会显示。
+- **积分统计提示「数据尚未加载完」** → 首次拉取被中断（关了弹窗或网络问题）；再打开一次会接着拉。
 
 ## 架构
 
@@ -100,6 +114,8 @@
 | `src/update-check.js` | 更新检查（UMD）：取本地/远端 `manifest.json` 版本、6h 节流、`localStorage` 缓存；纯函数 `deriveState`/`describe`/`compareVersions` 可在 Node 测试。 |
 | `src/content.js` | 内容脚本：响应 popup 的 `scan`（返回页面类型、名称、当前分类、变体、文字面板 `info`）与 `download`/`zip`/`saveText`（在页面内 fetch 字节 + 保存/打包，ZIP 可附带文本文件，支持 `blob:` 与签名 URL）。 |
 | `src/popup.{html,css,js}` | 弹窗 UI：编排 scan + 取原图 + 渲染（角色分标签 / 场景扁平）+ 下载；**下载设定** 按钮导出 `.md`。 |
+| `src/lib/stats.js` | 积分统计纯函数（UMD）：扣费记录精简 `normalize`、时长估算 `calibrate/effectiveSecs`、筛选 `applyFilter/presetRange`、汇总 `summarize/breakdown/bucketByTime`、筛选项 `optionsFor`、`buildCsv`。可在 Node 测试。 |
+| `src/spending.js` | 积分统计视图：在页面主世界取 Clerk token 分页拉 `api.dreem-world.ai/api/generation-charges/mine`（`limit=50`、`startingAfter` 游标），本地缓存 + 增量更新 + 中断续拉，渲染筛选、汇总、SVG 趋势图、明细表，CSV 通过页面 `<a download>` 保存。 |
 | `src/lib/jszip.min.js` | 第三方库（[JSZip](https://stuk.github.io/jszip/)，MIT），用于在页面内打包 ZIP。 |
 | `src/icons/icon-*.png` | 扩展图标（如需更换见[替换图标](#替换图标)）。 |
 
@@ -114,7 +130,7 @@
 ## 测试
 
 ```bash
-node --test   # core.js 与 page-config.js 的单元测试
+node --test   # core.js、page-config.js、update-check.js、stats.js 的单元测试
 ```
 
 ## 替换图标

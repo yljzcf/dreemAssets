@@ -1,6 +1,7 @@
 (function () {
   'use strict';
 
+  var btnSpending = document.getElementById('btnSpending');
   var btnInfo = document.getElementById('btnInfo');
   var btnAssets = document.getElementById('btnAssets');
   var tabsEl = document.getElementById('tabs');
@@ -67,6 +68,13 @@
     if (d.title) updateStatusEl.setAttribute('title', d.title);
     else updateStatusEl.removeAttribute('title');
     updateStatusEl.classList.toggle('has-update', d.blink);
+  }
+
+  // Asset view (default) ↔ spending stats view; the stats view loads on first show.
+  function setSpendingView(on) {
+    document.body.classList.toggle('view-spending', on);
+    btnSpending.textContent = on ? '返回' : '积分';
+    if (on) DreemSpending.open(currentTabId);
   }
 
   function sendToContent(message) {
@@ -340,6 +348,13 @@
     if (!tab) { setStatus('无法获取当前标签页', true); return; }
     currentTabId = tab.id;
 
+    // Other studio pages (insights, home…) open the spending stats directly;
+    // character/location pages keep the asset view with a 积分 toggle.
+    if (/^https:\/\/studio\.dreem-world\.ai\//.test(tab.url || '')) {
+      if (DreemCore.detectPageType(tab.url) === 'unknown') { setSpendingView(true); return; }
+      btnSpending.hidden = false;
+    }
+
     var scan = await sendToContent({ type: 'scan' });
     if (!scan) {
       setStatus('请在 dreem-world 打开本扩展', true);
@@ -437,6 +452,10 @@
       btnInfo.disabled = false;
       setTimeout(function () { btnInfo.textContent = orig; }, 2000);
     });
+  });
+
+  btnSpending.addEventListener('click', function () {
+    setSpendingView(!document.body.classList.contains('view-spending'));
   });
 
   function openRepo() { chrome.tabs.create({ url: DreemUpdateCheck.repoUrl() }); }
