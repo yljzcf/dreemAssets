@@ -78,6 +78,7 @@ body.view-spending #assetsView, body.view-spending #btnInfo, body.view-spending 
 .sp-chart g:hover .bar { fill: #1d4ed8; }
 .sp-chart g:hover .hit { fill: rgba(128,128,128,.1); }
 .sp-empty { padding: 18px 0; text-align: center; color: #888; font-size: 12px; }
+.sp-group { margin: 10px 0 6px; }
 
 .sp-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
 .sp-table th { font-weight: normal; color: #888; font-size: 11px; text-align: right; padding: 4px 3px; border-bottom: 1px solid rgba(128,128,128,.3); white-space: nowrap; }

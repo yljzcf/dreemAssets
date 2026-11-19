@@ -45,10 +45,13 @@
   }
 
   // One API charge → the compact record we keep (and cache). `res` is the video
-  // resolution, or the image size for image charges.
+  // resolution, or the image size for image charges. `ref` is the generation that was
+  // charged (producerRef.id): workspace canvases list these ids, which is how a charge
+  // is attributed to a workspace.
   function normalize(it) {
     it = it || {};
     var u = it.usage || {};
+    var p = it.producerRef || {};
     var type = u.type || it.outputType || '';
     return {
       id: String(it.id || ''),
@@ -61,8 +64,37 @@
       secs: num(u.durationSeconds),
       tokens: num(u.completionTokens),
       videoInput: !!u.videoInput,
-      worldId: it.worldId || ''
+      worldId: it.worldId || '',
+      ref: String(p.id || ''),
+      refKind: p.kind || ''
     };
+  }
+
+  // Workspace cache { wsId: { name, ids:[generation ids], deleted? } } → { genId: wsId }.
+  function genToWorkspace(spaces) {
+    var map = {};
+    Object.keys(spaces || {}).forEach(function (wsId) {
+      (spaces[wsId].ids || []).forEach(function (g) { map[g] = wsId; });
+    });
+    return map;
+  }
+
+  // Set r.ws (in place) to the record's workspace id, or '' when no canvas lists it.
+  function assignWorkspaces(records, genToWs) {
+    genToWs = genToWs || {};
+    (records || []).forEach(function (r) {
+      r.ws = (r.ref && genToWs[r.ref]) || '';
+    });
+    return records;
+  }
+
+  var NO_WORKSPACE = '未归属工作区';
+
+  function wsLabel(id, spaces) {
+    if (!id) return NO_WORKSPACE;
+    var s = (spaces || {})[id];
+    if (!s) return id;
+    return (s.name || id) + (s.deleted ? '（已删除）' : '');
   }
 
   function median(arr) {
@@ -122,17 +154,18 @@
     }
   }
 
-  // Filter by inclusive local-day range and model/resolution multi-selects
-  // (an empty or missing list means "all").
+  // Filter by inclusive local-day range and model/resolution/workspace multi-selects
+  // (an empty or missing list means "all"; workspace '' = unattributed).
   function applyFilter(records, f) {
     f = f || {};
-    var models = f.models || [], resolutions = f.resolutions || [];
+    var models = f.models || [], resolutions = f.resolutions || [], workspaces = f.workspaces || [];
     return (records || []).filter(function (r) {
       var d = dayKey(r.createdAt);
       if (f.from && d < f.from) return false;
       if (f.to && d > f.to) return false;
       if (models.length && models.indexOf(r.model) < 0) return false;
       if (resolutions.length && resolutions.indexOf(r.res) < 0) return false;
+      if (workspaces.length && workspaces.indexOf(r.ws || '') < 0) return false;
       return true;
     });
   }
@@ -150,13 +183,18 @@
     return s;
   }
 
-  // Group by model × resolution, most coins first; pct is the share of coins.
-  function breakdown(records, calib) {
+  // Group by model × resolution (by = 'model', default) or by workspace (by = 'workspace'),
+  // most coins first; pct is the share of coins, `video` whether any record is a video.
+  function breakdown(records, calib, by) {
+    var byWs = by === 'workspace';
     var groups = {}, total = 0;
     (records || []).forEach(function (r) {
-      var k = r.model + '|' + r.res;
-      var g = groups[k] = groups[k] || { model: r.model, res: r.res, type: r.type, count: 0, coins: 0, secs: 0, estimatedCount: 0 };
+      var k = byWs ? (r.ws || '') : r.model + '|' + r.res;
+      var g = groups[k] = groups[k] || (byWs
+        ? { ws: r.ws || '', video: false, count: 0, coins: 0, secs: 0, estimatedCount: 0 }
+        : { model: r.model, res: r.res, video: false, count: 0, coins: 0, secs: 0, estimatedCount: 0 });
       var e = effectiveSecs(r, calib);
+      if (r.type === 'video') g.video = true;
       g.count++;
       g.coins += r.coins;
       g.secs += e.secs;
@@ -199,20 +237,26 @@
     return (na - nb) || (a < b ? -1 : a > b ? 1 : 0);
   }
 
-  // Selectable values with counts: every model in `records` (most used first), and the
-  // resolutions available under the selected models (all models when none selected).
+  // Selectable values with counts: every model in `records` (most used first), the
+  // resolutions available under the selected models (all models when none selected), and
+  // the workspaces (most coins first, unattributed '' last).
   function optionsFor(records, models) {
     models = models || [];
-    var mc = {}, rc = {};
+    var mc = {}, rc = {}, wc = {};
     (records || []).forEach(function (r) {
       mc[r.model] = (mc[r.model] || 0) + 1;
       if (!models.length || models.indexOf(r.model) > -1) rc[r.res] = (rc[r.res] || 0) + 1;
+      var w = wc[r.ws || ''] = wc[r.ws || ''] || { count: 0, coins: 0 };
+      w.count++;
+      w.coins += r.coins;
     });
     return {
       models: Object.keys(mc).map(function (k) { return { value: k, count: mc[k] }; })
         .sort(function (a, b) { return b.count - a.count || (a.value < b.value ? -1 : 1); }),
       resolutions: Object.keys(rc).map(function (k) { return { value: k, count: rc[k] }; })
-        .sort(function (a, b) { return compareRes(a.value, b.value); })
+        .sort(function (a, b) { return compareRes(a.value, b.value); }),
+      workspaces: Object.keys(wc).map(function (k) { return { value: k, count: wc[k].count, coins: wc[k].coins }; })
+        .sort(function (a, b) { return (!a.value) - (!b.value) || b.coins - a.coins || b.count - a.count; })
     };
   }
 
@@ -232,14 +276,14 @@
   var TYPE_LABELS = { video: '视频', image: '图片' };
 
   // CSV with a UTF-8 BOM and CRLF rows so Excel opens the Chinese headers correctly.
-  function buildCsv(records, calib) {
-    var rows = [['时间', '类型', '模型', '分辨率/尺寸', '时长(秒)', '时长来源', '消耗积分', 'worldId', 'id']];
+  function buildCsv(records, calib, spaces) {
+    var rows = [['时间', '类型', '模型', '分辨率/尺寸', '时长(秒)', '时长来源', '消耗积分', '工作区', 'worldId', 'id']];
     (records || []).forEach(function (r) {
       var e = effectiveSecs(r, calib);
       rows.push([
         localDateTime(r.createdAt), TYPE_LABELS[r.type] || r.type, r.model, r.res,
         e.source === 'none' || e.source === 'missing' ? '' : e.secs, SOURCE_LABELS[e.source],
-        r.coins, r.worldId, r.id
+        r.coins, wsLabel(r.ws, spaces), r.worldId, r.id
       ]);
     });
     return '﻿' + rows.map(function (row) { return row.map(csvCell).join(','); }).join('\r\n') + '\r\n';
@@ -250,6 +294,10 @@
     dayKey: dayKey,
     addDays: addDays,
     normalize: normalize,
+    genToWorkspace: genToWorkspace,
+    assignWorkspaces: assignWorkspaces,
+    wsLabel: wsLabel,
+    NO_WORKSPACE: NO_WORKSPACE,
     calibrate: calibrate,
     effectiveSecs: effectiveSecs,
     presetRange: presetRange,

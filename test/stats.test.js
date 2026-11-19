@@ -12,11 +12,13 @@ function rec(o) {
 test('normalize: video charge', () => {
   const r = stats.normalize({
     id: 'c1', createdAt: '2026-11-02T12:11:12.801Z', coinsCharged: 75, outputType: 'video', worldId: null,
+    producerRef: { id: 'g1', kind: 'asset_generation' },
     usage: { type: 'video', model: 'seedance-2-5', resolution: '480p', durationSeconds: 4, completionTokens: '38520', videoInput: true }
   });
   assert.deepStrictEqual(r, {
     id: 'c1', createdAt: '2026-11-02T12:11:12.801Z', coins: 75, type: 'video', model: 'seedance-2-5',
-    res: '480p', quality: '', secs: 4, tokens: 38520, videoInput: true, worldId: ''
+    res: '480p', quality: '', secs: 4, tokens: 38520, videoInput: true, worldId: '',
+    ref: 'g1', refKind: 'asset_generation'
   });
 });
 
@@ -203,10 +205,74 @@ test('buildCsv: BOM, header, escaping and duration source', () => {
     rec({ id: 'b', createdAt: at(2026, 11, 2, 9), model: 'say "hi"', coins: 9, tokens: 21660 * 4 }),
     rec({ id: 'c', type: 'image', res: '1024x1024', coins: 15 })
   ]);
-  assert.ok(csv.startsWith('﻿时间,类型,模型,分辨率/尺寸,时长(秒),时长来源,消耗积分,worldId,id\r\n'));
+  assert.ok(csv.startsWith('﻿时间,类型,模型,分辨率/尺寸,时长(秒),时长来源,消耗积分,工作区,worldId,id\r\n'));
   const lines = csv.slice(1).trim().split('\r\n');
   assert.strictEqual(lines.length, 4);
-  assert.strictEqual(lines[1], '2026-11-03 10:00:00,视频,"m,1",720p,8,记录,20,,a');
-  assert.strictEqual(lines[2], '2026-11-02 09:00:00,视频,"say ""hi""",720p,4,估算,9,,b');
-  assert.ok(lines[3].endsWith(',图片,seedance-2-5,1024x1024,,,15,,c'));
+  assert.strictEqual(lines[1], '2026-11-03 10:00:00,视频,"m,1",720p,8,记录,20,未归属工作区,,a');
+  assert.strictEqual(lines[2], '2026-11-02 09:00:00,视频,"say ""hi""",720p,4,估算,9,未归属工作区,,b');
+  assert.ok(lines[3].endsWith(',图片,seedance-2-5,1024x1024,,,15,未归属工作区,,c'));
+});
+
+test('buildCsv: workspace column uses the workspace name', () => {
+  const csv = stats.buildCsv([rec({ id: 'a', ws: 'w1', coins: 5, secs: 2 }), rec({ id: 'b', ws: 'w2', coins: 1, secs: 1 })],
+    null, { w1: { name: 'IAW, 03', ids: [] }, w2: { name: 'old', ids: [], deleted: true } });
+  const lines = csv.slice(1).trim().split('\r\n');
+  assert.ok(lines[1].endsWith(',5,"IAW, 03",,a'));
+  assert.ok(lines[2].endsWith(',1,old（已删除）,,b'));
+});
+
+test('normalize: missing producerRef gives empty ref', () => {
+  const r = stats.normalize({ id: 'c3', coinsCharged: 1, usage: { type: 'video' } });
+  assert.strictEqual(r.ref, '');
+  assert.strictEqual(r.refKind, '');
+});
+
+test('genToWorkspace + assignWorkspaces: canvas ids map charges, unknown refs → ""', () => {
+  const map = stats.genToWorkspace({ w1: { name: 'A', ids: ['g1', 'g2'] }, w2: { name: 'B', ids: ['g3'] }, w3: { name: 'C' } });
+  assert.deepStrictEqual(map, { g1: 'w1', g2: 'w1', g3: 'w2' });
+  const rs = stats.assignWorkspaces([rec({ id: 'a', ref: 'g2' }), rec({ id: 'b', ref: 'g3' }), rec({ id: 'c', ref: 'gx' }), rec({ id: 'd', ref: '' })], map);
+  assert.deepStrictEqual(rs.map(r => r.ws), ['w1', 'w2', '', '']);
+  assert.deepStrictEqual(stats.genToWorkspace(null), {});
+});
+
+test('wsLabel: name, deleted, unknown id and unattributed', () => {
+  const spaces = { w1: { name: 'mana' }, w2: { name: 'old', deleted: true }, w3: { name: '' } };
+  assert.strictEqual(stats.wsLabel('w1', spaces), 'mana');
+  assert.strictEqual(stats.wsLabel('w2', spaces), 'old（已删除）');
+  assert.strictEqual(stats.wsLabel('w3', spaces), 'w3');
+  assert.strictEqual(stats.wsLabel('w9', spaces), 'w9');
+  assert.strictEqual(stats.wsLabel('', spaces), stats.NO_WORKSPACE);
+  assert.strictEqual(stats.wsLabel(undefined), '未归属工作区');
+});
+
+test('applyFilter: workspace multi-select, "" selects unattributed', () => {
+  const rs = [rec({ id: 'a', ws: 'w1' }), rec({ id: 'b', ws: 'w2' }), rec({ id: 'c', ws: '' }), rec({ id: 'd' })];
+  assert.deepStrictEqual(stats.applyFilter(rs, { workspaces: ['w1'] }).map(r => r.id), ['a']);
+  assert.deepStrictEqual(stats.applyFilter(rs, { workspaces: ['w2', ''] }).map(r => r.id), ['b', 'c', 'd']);
+  assert.strictEqual(stats.applyFilter(rs, { workspaces: [] }).length, 4);
+});
+
+test('optionsFor: workspaces by coins, unattributed last', () => {
+  const o = stats.optionsFor([
+    rec({ ws: 'w1', coins: 10 }), rec({ ws: 'w1', coins: 10 }),
+    rec({ ws: 'w2', coins: 50 }),
+    rec({ ws: '', coins: 999 })
+  ], []);
+  assert.deepStrictEqual(o.workspaces.map(w => [w.value, w.count, w.coins]), [['w2', 1, 50], ['w1', 2, 20], ['', 1, 999]]);
+});
+
+test('breakdown: by workspace, video flag for mixed groups', () => {
+  const g = stats.breakdown([
+    rec({ ws: 'w1', coins: 30, secs: 5 }),
+    rec({ ws: 'w1', coins: 10, type: 'image', res: '1024x1024' }),
+    rec({ ws: 'w2', coins: 15, type: 'image', res: '1024x1024' }),
+    rec({ ws: '', coins: 45, secs: 3 })
+  ], null, 'workspace');
+  assert.deepStrictEqual(g.map(x => [x.ws, x.count, x.coins, x.secs, x.video]), [
+    ['', 1, 45, 3, true],
+    ['w1', 2, 40, 5, true],
+    ['w2', 1, 15, 0, false]
+  ]);
+  assert.strictEqual(g[1].pct, 0.4);
+  assert.strictEqual(stats.breakdown([rec({ type: 'image', res: '1024x1024' })])[0].video, false);
 });
